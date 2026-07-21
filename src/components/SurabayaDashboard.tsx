@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase"; // Adjust path if needed
 import { 
   ServiceRequest, 
   RequestStatus, 
@@ -13,12 +15,14 @@ import {
   XCircle, 
   AlertCircle, 
   User, 
-  Calendar, 
   Filter, 
-  Plus, 
   Camera, 
   ClipboardCheck, 
-  FileText 
+  FileText,
+  Edit2,
+  Trash2,
+  X,
+  Save
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -65,6 +69,13 @@ export default function SurabayaDashboard({
   const [cancellationReason, setCancellationReason] = useState("");
   const [dialogError, setDialogError] = useState<string | null>(null);
 
+  // Edit Card State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editPriority, setEditPriority] = useState<PriorityLevel>(PriorityLevel.MEDIUM);
+  const [editCategory, setEditCategory] = useState<IssueCategory>(IssueCategory.STRUCTURAL);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auth check: user in TIMIKA cannot edit data for SURABAYA and vice versa (Admin is always authorized)
@@ -78,6 +89,51 @@ export default function SurabayaDashboard({
     }
   }, [loggedInUser]);
 
+  // Delete Request Handler
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
+      try {
+        await deleteDoc(doc(db, "requests", id));
+      } catch (error: any) {
+        console.error("Error deleting request: ", error);
+        alert(error.message || "Failed to delete request. Check security rules.");
+      }
+    }
+  };
+
+  // Start Edit Mode Handler
+  const startEdit = (e: React.MouseEvent, req: ServiceRequest) => {
+    e.stopPropagation();
+    setEditingId(req.id);
+    setEditDescription(req.description || "");
+    setEditPriority(req.priority || PriorityLevel.MEDIUM);
+    setEditCategory(req.category || IssueCategory.STRUCTURAL);
+  };
+
+  // Save Edit Handler
+  const handleUpdate = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!editDescription.trim()) return;
+    
+    setIsUpdating(true);
+    try {
+      const reqRef = doc(db, "requests", id);
+      await updateDoc(reqRef, {
+        description: editDescription,
+        priority: editPriority,
+        category: editCategory,
+        updatedAt: new Date().toISOString()
+      });
+      setEditingId(null);
+    } catch (error: any) {
+      console.error("Error updating request: ", error);
+      alert(error.message || "Failed to update request.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Filtered requests
   const filteredRequests = requests.filter((r) => {
     if (filterCategory !== "All" && r.category !== filterCategory) return false;
@@ -89,7 +145,8 @@ export default function SurabayaDashboard({
     return filteredRequests.filter((r) => r.status === status);
   };
 
-  const handleStartRepair = (id: string) => {
+  const handleStartRepair = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     onStatusUpdate(id, {
       status: RequestStatus.IN_PROGRESS,
       operator: operatorName,
@@ -98,7 +155,8 @@ export default function SurabayaDashboard({
     });
   };
 
-  const handleOpenActionDialog = (id: string, type: "DONE" | "CANCELLED") => {
+  const handleOpenActionDialog = (e: React.MouseEvent, id: string, type: "DONE" | "CANCELLED") => {
+    e.stopPropagation();
     setActiveActionId(id);
     setActionType(type);
     setResolutionNotes("");
@@ -305,37 +363,17 @@ export default function SurabayaDashboard({
                   </div>
                 ) : (
                   colRequests.map((req) => {
-                    const priorityStyles = {
-                      [PriorityLevel.LOW]: "bg-slate-100 text-slate-800 border-slate-200/60",
-                      [PriorityLevel.MEDIUM]: "bg-blue-50 text-blue-800 border-blue-100/55",
-                      [PriorityLevel.HIGH]: "bg-amber-50 text-amber-800 border-amber-200/60",
-                      [PriorityLevel.URGENT]: "bg-rose-50 text-rose-800 border-rose-200/60 animate-pulse",
-                    };
-
-                    // Translated priorities and categories for cards
-                    let displayPrio = req.priority;
-                    if (req.priority === PriorityLevel.LOW) displayPrio = t.prioLow as PriorityLevel;
-                    else if (req.priority === PriorityLevel.MEDIUM) displayPrio = t.prioMedium as PriorityLevel;
-                    else if (req.priority === PriorityLevel.HIGH) displayPrio = t.prioHigh as PriorityLevel;
-                    else if (req.priority === PriorityLevel.URGENT) displayPrio = t.prioUrgent as PriorityLevel;
-
-                    let displayCat = req.category;
-                    if (req.category === IssueCategory.ELECTRICAL) displayCat = t.catElectrical as IssueCategory;
-                    else if (req.category === IssueCategory.STRUCTURAL) displayCat = t.catStructural as IssueCategory;
-                    else if (req.category === IssueCategory.REFRIGERATION_TELEMATICS) displayCat = t.catRefrigeration as IssueCategory;
-                    else if (req.category === IssueCategory.MECHANICAL) displayCat = t.catMechanical as IssueCategory;
-
                     return (
                       <div
                         key={req.id}
-                        className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-400 hover:shadow-md transition-all p-4 relative space-y-3 group hover:-translate-y-0.5"
+                        onClick={() => {
+                          if (editingId !== req.id) onSelectRequest(req);
+                        }}
+                        className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-400 hover:shadow-md transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer"
                       >
                         {/* Header Details */}
                         <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span
-                            onClick={() => onSelectRequest(req)}
-                            className="font-bold text-slate-950 group-hover:text-blue-600 cursor-pointer underline decoration-dotted font-bold"
-                          >
+                          <span className="font-bold text-slate-950 group-hover:text-blue-600 underline decoration-dotted font-bold">
                             {req.id}
                           </span>
                           <span className="text-slate-400 text-[9px]">
@@ -352,10 +390,7 @@ export default function SurabayaDashboard({
 
                         {/* Damage Photo Preview */}
                         {req.photoUrl && (
-                          <div 
-                            onClick={() => onSelectRequest(req)}
-                            className="relative h-24 rounded-lg overflow-hidden border border-slate-100 bg-slate-50 cursor-pointer"
-                          >
+                          <div className="relative h-24 rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
                             <img
                               src={req.photoUrl}
                               alt="Container issue proof"
@@ -369,75 +404,161 @@ export default function SurabayaDashboard({
                           </div>
                         )}
 
-                        {/* Description */}
-                        <div>
-                          <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-                            {req.description}
-                          </p>
-                        </div>
-
-                        {/* Action buttons based on current state */}
-                        {col.status === RequestStatus.WAITING && (
-                          <button
-                            onClick={() => handleStartRepair(req.id)}
-                            disabled={!isAuthorized}
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
-                          >
-                            <Play className="h-3 w-3 fill-current" />
-                            <span>{t.acceptRepairBtn}</span>
-                          </button>
-                        )}
-
-                        {col.status === RequestStatus.IN_PROGRESS && (
-                          <div className={loggedInUser?.email === "mpigome44@gmail.com" ? "grid grid-cols-2 gap-1.5" : "w-full"}>
-                            <button
-                              onClick={() => handleOpenActionDialog(req.id, "DONE")}
-                              disabled={!isAuthorized}
-                              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
-                            >
-                              <CheckCircle className="h-3 w-3" />
-                              <span>{t.completeBtn}</span>
-                            </button>
-                            {loggedInUser?.email === "mpigome44@gmail.com" && (
-                              <button
-                                onClick={() => handleOpenActionDialog(req.id, "CANCELLED")}
-                                disabled={!isAuthorized}
-                                className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
+                        {/* Inline Edit Mode vs Normal View Mode */}
+                        {editingId === req.id ? (
+                          <div className="space-y-3 pt-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="grid grid-cols-2 gap-2">
+                              <select 
+                                value={editPriority} 
+                                onChange={(e) => setEditPriority(e.target.value as PriorityLevel)}
+                                className="text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
                               >
-                                <XCircle className="h-3 w-3" />
-                                <span>{t.cancelBtn}</span>
+                                <option value={PriorityLevel.LOW}>LOW</option>
+                                <option value={PriorityLevel.MEDIUM}>MEDIUM</option>
+                                <option value={PriorityLevel.HIGH}>HIGH</option>
+                                <option value={PriorityLevel.URGENT}>URGENT</option>
+                              </select>
+
+                              <select 
+                                value={editCategory} 
+                                onChange={(e) => setEditCategory(e.target.value as IssueCategory)}
+                                className="text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                              >
+                                <option value={IssueCategory.ELECTRICAL}>Electrical</option>
+                                <option value={IssueCategory.STRUCTURAL}>Structural</option>
+                                <option value={IssueCategory.REFRIGERATION_TELEMATICS}>Refrig/Telematics</option>
+                                <option value={IssueCategory.MECHANICAL}>Mechanical</option>
+                              </select>
+                            </div>
+                            
+                            <textarea 
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-blue-500 resize-none font-sans"
+                              rows={3}
+                            />
+                            
+                            <div className="flex gap-2 justify-end pt-1">
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingId(null);
+                                }}
+                                className="px-2.5 py-1 text-[10px] text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium flex items-center gap-1"
+                              >
+                                <X className="h-3 w-3" /> Cancel
+                              </button>
+                              <button 
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={(e) => handleUpdate(e, req.id)}
+                                className="px-2.5 py-1 text-[10px] text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-1 shadow-sm disabled:opacity-50"
+                              >
+                                <Save className="h-3 w-3" /> {isUpdating ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Description */}
+                            <div>
+                              <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                                {req.description}
+                              </p>
+                            </div>
+
+                            {/* Action buttons based on current state */}
+                            {col.status === RequestStatus.WAITING && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleStartRepair(e, req.id)}
+                                disabled={!isAuthorized}
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
+                              >
+                                <Play className="h-3 w-3 fill-current" />
+                                <span>{t.acceptRepairBtn}</span>
                               </button>
                             )}
-                          </div>
-                        )}
 
-                        {/* Done Resolutions summary */}
-                        {col.status === RequestStatus.DONE && (
-                          <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 text-[11px] leading-relaxed">
-                            <span className="font-bold text-emerald-950 block text-[9px] uppercase tracking-wider">{t.resolutionNotesLabel}</span>
-                            <p className="text-emerald-800 line-clamp-2 mt-0.5">{req.resolutionNotes}</p>
-                          </div>
-                        )}
+                            {col.status === RequestStatus.IN_PROGRESS && (
+                              <div className={loggedInUser?.email === "mpigome44@gmail.com" ? "grid grid-cols-2 gap-1.5" : "w-full"}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenActionDialog(e, req.id, "DONE")}
+                                  disabled={!isAuthorized}
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>{t.completeBtn}</span>
+                                </button>
+                                {loggedInUser?.email === "mpigome44@gmail.com" && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenActionDialog(e, req.id, "CANCELLED")}
+                                    disabled={!isAuthorized}
+                                    className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
+                                  >
+                                    <XCircle className="h-3 w-3" />
+                                    <span>{t.cancelBtn}</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
 
-                        {/* Cancelled summary */}
-                        {col.status === RequestStatus.CANCELLED && (
-                          <div className="bg-rose-50/60 border border-rose-100 rounded-lg p-2 text-[11px] leading-relaxed">
-                            <span className="font-bold text-rose-950 block text-[9px] uppercase tracking-wider">{t.voidReasonLabel}</span>
-                            <p className="text-rose-800 line-clamp-2 mt-0.5">{req.cancellationReason}</p>
-                          </div>
-                        )}
+                            {/* Done Resolutions summary */}
+                            {col.status === RequestStatus.DONE && (
+                              <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 text-[11px] leading-relaxed">
+                                <span className="font-bold text-emerald-950 block text-[9px] uppercase tracking-wider">{t.resolutionNotesLabel}</span>
+                                <p className="text-emerald-800 line-clamp-2 mt-0.5">{req.resolutionNotes}</p>
+                              </div>
+                            )}
 
-                        {/* Audit Details link */}
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2 font-mono">
-                          <span className="truncate max-w-[120px]">By: {req.reporterName}</span>
-                          <button 
-                            onClick={() => onSelectRequest(req)}
-                            className="text-slate-500 hover:text-blue-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>{t.auditTrailBtn} ({req.auditLogs.length})</span>
-                          </button>
-                        </div>
+                            {/* Cancelled summary */}
+                            {col.status === RequestStatus.CANCELLED && (
+                              <div className="bg-rose-50/60 border border-rose-100 rounded-lg p-2 text-[11px] leading-relaxed">
+                                <span className="font-bold text-rose-950 block text-[9px] uppercase tracking-wider">{t.voidReasonLabel}</span>
+                                <p className="text-rose-800 line-clamp-2 mt-0.5">{req.cancellationReason}</p>
+                              </div>
+                            )}
+
+                            {/* Audit Details link & Action Buttons */}
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2 font-mono">
+                              <span className="truncate max-w-[100px]">By: {req.reporterName}</span>
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectRequest(req);
+                                }}
+                                className="text-slate-500 hover:text-blue-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                <span>{t.auditTrailBtn} ({req.auditLogs.length})</span>
+                              </button>
+                            </div>
+
+                            {/* Edit & Delete Action Buttons for Surabaya / Admin */}
+                            {isAuthorized && (
+                              <div className="flex items-center justify-end gap-3 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => startEdit(e, req)}
+                                  className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-blue-50 transition-colors"
+                                >
+                                  <Edit2 className="h-3 w-3" /> Edit
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => handleDelete(e, req.id)}
+                                  className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" /> Delete
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     );
                   })
@@ -467,6 +588,7 @@ export default function SurabayaDashboard({
                 )}
               </h3>
               <button
+                type="button"
                 onClick={handleCloseActionDialog}
                 className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 cursor-pointer"
               >
