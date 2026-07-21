@@ -768,9 +768,11 @@ export default function App() {
 
         <header className="p-5 flex items-center justify-between border-b border-slate-900 shrink-0 relative z-10 bg-slate-950/40 backdrop-blur-md">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center font-bold text-lg italic shadow-lg shadow-blue-900/20 text-white">
-              PI
-            </div>
+            <img 
+              src="/img/panjasa-intradin_logo.png" 
+              alt="PT. Panjasa Intradin Logo" 
+              className="h-10 w-auto object-contain shrink-0" 
+            />
             <div>
               <h1 className="text-sm font-extrabold uppercase tracking-tight text-white leading-none">
                 PT. PANJASA-INTRADIN
@@ -1047,34 +1049,34 @@ export default function App() {
           onScanImage={handleMobileScanImage}
         />
 
-        {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) */}
-        <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
+        {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) - Fully Responsive for Mobile */}
+        <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2">
             <button
               onClick={() => setCurrentTab("dashboard")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 currentTab === "dashboard"
                   ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
               }`}
             >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>{language === "ENG" ? "Active Dashboard" : "Dashboard Aktif"}</span>
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              <span>{language === "ENG" ? "Dashboard" : "Dashboard"}</span>
             </button>
             <button
               onClick={() => setCurrentTab("history")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 currentTab === "history"
                   ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
               }`}
             >
-              <History className="h-4 w-4" />
+              <History className="h-4 w-4 shrink-0" />
               <span>{language === "ENG" ? "History / Archives" : "Riwayat & Arsip"}</span>
             </button>
           </div>
 
-          <div className="hidden sm:flex items-center space-x-3 text-[11px] font-mono text-slate-400">
+          <div className="flex items-center justify-between sm:justify-end text-[11px] font-mono text-slate-400 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
             <span>{language === "ENG" ? "Active View:" : "Tampilan:"} <strong className="text-slate-200 uppercase">{currentTab}</strong></span>
           </div>
         </div>
@@ -1270,6 +1272,7 @@ export default function App() {
                       setPrefilledContainerNumber("");
                       setPrefilledPhoto(null);
                     }}
+                    onNavigateHistory={() => setCurrentTab("history")}
                   />
                 )}
 
@@ -1330,6 +1333,7 @@ export default function App() {
                             setPrefilledContainerNumber("");
                             setPrefilledPhoto(null);
                           }}
+                          onNavigateHistory={() => setCurrentTab("history")}
                         />
                       </div>
 
@@ -1469,7 +1473,7 @@ export default function App() {
                                 </td>
                                 <td className="py-3.5 px-4 font-medium text-slate-700">
                                   {req.category}
-                                </td>
+                                 </td>
                                 <td className="py-3.5 px-4 text-slate-600 max-w-md">
                                   <div className="line-clamp-1 font-medium text-slate-900">{req.description}</div>
                                   <div className="line-clamp-1 text-[11px] text-slate-400 mt-0.5">
