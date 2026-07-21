@@ -22,7 +22,8 @@ import {
   Edit2,
   Trash2,
   X,
-  Save
+  Save,
+  Printer
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -41,6 +42,7 @@ interface SurabayaDashboardProps {
     }
   ) => void;
   onSelectRequest: (request: ServiceRequest) => void;
+  onPrint?: (request: ServiceRequest) => void; // Added onPrint prop to connect to App.tsx print engine
   language: "ENG" | "IND";
   loggedInUser: { name: string; location: LocationTeam; email?: string } | null;
 }
@@ -49,6 +51,7 @@ export default function SurabayaDashboard({
   requests,
   onStatusUpdate,
   onSelectRequest,
+  onPrint,
   language,
   loggedInUser,
 }: SurabayaDashboardProps) {
@@ -482,25 +485,41 @@ export default function SurabayaDashboard({
                             )}
 
                             {col.status === RequestStatus.IN_PROGRESS && (
-                              <div className={loggedInUser?.email === "mpigome44@gmail.com" ? "grid grid-cols-2 gap-1.5" : "w-full"}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenActionDialog(e, req.id, "DONE")}
-                                  disabled={!isAuthorized}
-                                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
-                                >
-                                  <CheckCircle className="h-3 w-3 shrink-0" />
-                                  <span>{t.completeBtn}</span>
-                                </button>
-                                {loggedInUser?.email === "mpigome44@gmail.com" && (
+                              <div className="space-y-1.5">
+                                <div className={loggedInUser?.email === "mpigome44@gmail.com" ? "grid grid-cols-2 gap-1.5" : "w-full"}>
                                   <button
                                     type="button"
-                                    onClick={(e) => handleOpenActionDialog(e, req.id, "CANCELLED")}
+                                    onClick={(e) => handleOpenActionDialog(e, req.id, "DONE")}
                                     disabled={!isAuthorized}
-                                    className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                                   >
-                                    <XCircle className="h-3 w-3 shrink-0" />
-                                    <span>{t.cancelBtn}</span>
+                                    <CheckCircle className="h-3 w-3 shrink-0" />
+                                    <span>{t.completeBtn}</span>
+                                  </button>
+                                  {loggedInUser?.email === "mpigome44@gmail.com" && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleOpenActionDialog(e, req.id, "CANCELLED")}
+                                      disabled={!isAuthorized}
+                                      className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
+                                    >
+                                      <XCircle className="h-3 w-3 shrink-0" />
+                                      <span>{t.cancelBtn}</span>
+                                    </button>
+                                  )}
+                                </div>
+                                {/* PRINT (PDF) Trigger for In Progress tasks */}
+                                {onPrint && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onPrint(req);
+                                    }}
+                                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
+                                  >
+                                    <Printer className="h-3 w-3" />
+                                    <span>PRINT (PDF)</span>
                                   </button>
                                 )}
                               </div>
@@ -508,9 +527,25 @@ export default function SurabayaDashboard({
 
                             {/* Done Resolutions summary */}
                             {col.status === RequestStatus.DONE && (
-                              <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 text-[11px] leading-relaxed">
-                                <span className="font-bold text-emerald-950 block text-[9px] uppercase tracking-wider">{t.resolutionNotesLabel}</span>
-                                <p className="text-emerald-800 line-clamp-2 mt-0.5">{req.resolutionNotes}</p>
+                              <div className="space-y-1.5">
+                                <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 text-[11px] leading-relaxed">
+                                  <span className="font-bold text-emerald-950 block text-[9px] uppercase tracking-wider">{t.resolutionNotesLabel}</span>
+                                  <p className="text-emerald-800 line-clamp-2 mt-0.5">{req.resolutionNotes}</p>
+                                </div>
+                                {/* PRINT (PDF) Trigger for Completed tasks */}
+                                {onPrint && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onPrint(req);
+                                    }}
+                                    className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
+                                  >
+                                    <Printer className="h-3 w-3" />
+                                    <span>PRINT CERTIFICATE</span>
+                                  </button>
+                                )}
                               </div>
                             )}
 
