@@ -301,10 +301,11 @@ export default function TimikaForm({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+    // Replaced grid with Container-Responsive Flex Wrap
+    <div className="flex flex-wrap gap-6 animate-fade-in w-full">
 
-      {/* Form & AI Scanner Column */}
-      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative">
+      {/* Form & AI Scanner Column (flex-[1_1_450px] forces it to stack if container is < 750px wide) */}
+      <div className="flex-[1_1_450px] min-w-[280px] bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full">
         {!isAuthorized && (
           <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm shadow-2xl text-white space-y-4">
@@ -414,8 +415,8 @@ export default function TimikaForm({
 
         {/* Create Request Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-[1_1_200px] min-w-[150px]">
               <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5 flex items-center justify-between">
                 <span>{t.containerIdLabel} *</span>
                 {prefilledContainerNumber && (
@@ -449,7 +450,7 @@ export default function TimikaForm({
               </div>
             </div>
 
-            <div>
+            <div className="flex-[1_1_200px] min-w-[150px]">
               <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
                 {t.inspectorNameLabel} *
               </label>
@@ -507,7 +508,7 @@ export default function TimikaForm({
       </div>
 
       {/* Timika Sent Tracker Column */}
-      <div className="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/50 shadow-sm flex flex-col h-[calc(100vh-220px)] min-h-[500px]">
+      <div className="flex-[1_1_300px] min-w-[280px] bg-slate-50 p-5 rounded-2xl border border-slate-200/50 shadow-sm flex flex-col h-[calc(100vh-220px)] min-h-[500px] max-w-full">
         <div className="mb-4">
           <div className="flex items-center space-x-2 text-slate-800 mb-1">
             <div className="p-1 bg-slate-200 text-slate-700 rounded-md">
@@ -563,7 +564,7 @@ export default function TimikaForm({
                   }}
                   className="bg-white p-4 rounded-xl border border-slate-200/70 hover:border-blue-400 transition-all cursor-pointer shadow-sm relative group space-y-2 hover:-translate-y-0.5"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-mono text-xs font-bold text-slate-950 group-hover:text-blue-600 transition-colors">
                       {req.id} • {req.containerNumber}
                     </span>
@@ -575,11 +576,11 @@ export default function TimikaForm({
                   {/* Inline Edit Mode vs Normal View Mode */}
                   {editingId === req.id ? (
                     <div className="space-y-3 pt-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <select 
                           value={editPriority} 
                           onChange={(e) => setEditPriority(e.target.value as PriorityLevel)}
-                          className="text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                          className="flex-[1_1_100px] min-w-0 text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
                         >
                           <option value={PriorityLevel.LOW}>LOW</option>
                           <option value={PriorityLevel.MEDIUM}>MEDIUM</option>
@@ -590,7 +591,7 @@ export default function TimikaForm({
                         <select 
                           value={editCategory} 
                           onChange={(e) => setEditCategory(e.target.value as IssueCategory)}
-                          className="text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                          className="flex-[1_1_100px] min-w-0 text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
                         >
                           <option value={IssueCategory.ELECTRICAL}>Electrical</option>
                           <option value={IssueCategory.STRUCTURAL}>Structural</option>
@@ -633,8 +634,8 @@ export default function TimikaForm({
                         {req.description}
                       </p>
 
-                      <div className="flex items-center gap-2 justify-between border-t border-slate-100 pt-2 text-[10px]">
-                        <div className="flex gap-2 items-center">
+                      <div className="flex flex-wrap items-center gap-2 justify-between border-t border-slate-100 pt-2 text-[10px]">
+                        <div className="flex flex-wrap gap-2 items-center">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${priorityColors[req.priority]}`}>
                             {displayPrio}
                           </span>
