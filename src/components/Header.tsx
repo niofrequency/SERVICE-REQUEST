@@ -90,7 +90,7 @@ export default function Header({
               <div className="flex items-center space-x-3">
                 <div className="h-10 flex items-center justify-center select-none shrink-0">
                   <img 
-                    src="img/panjasa-intradin_logo.png" 
+                    src="/img/panjasa-intradin_logo.png" 
                     alt="PT. Panjasa Intradin Logo" 
                     className="h-9 w-auto object-contain"
                   />
