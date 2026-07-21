@@ -1019,7 +1019,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col text-slate-900 font-sans pb-20 sm:pb-0">
+    <div className="min-h-screen bg-slate-50/50 flex flex-col text-slate-900 font-sans pb-20 sm:pb-0 w-full overflow-x-hidden">
       {/* Real-time sync Header */}
       <Header
         currentRole={currentRole}
@@ -1064,7 +1064,7 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 relative min-h-[500px]">
+      <main className="flex-1 max-w-[1920px] w-full mx-auto p-4 sm:p-6 lg:px-8 space-y-6 relative min-h-[500px]">
         {isLoading && (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/45 backdrop-blur-md rounded-2xl py-20 space-y-4">
             <div className="w-64 h-1.5 bg-slate-200/80 rounded-full overflow-hidden relative border border-slate-300/40">
@@ -1260,16 +1260,16 @@ export default function App() {
                 </div>
 
                 {/* Vertical split views */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
                   {/* Left Column: Timika Intake */}
-                  <div className="xl:col-span-5 bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
+                  <div className="xl:col-span-3 bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
                     <div className="border-b border-slate-100 pb-3">
                       <div className="flex justify-between items-center">
                         <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
                           <span>TIMIKA FIELD OPERATIONS</span>
                         </h3>
-                        <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">AI ASSIST ACTIVE</span>
+                        <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden lg:inline-block">AI ASSIST</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         Field technicians log incoming container damages with real-time Gemini OCR automation.
@@ -1292,7 +1292,7 @@ export default function App() {
                   </div>
 
                   {/* Right Column: Surabaya Workshop Dashboard */}
-                  <div className="xl:col-span-7 space-y-6">
+                  <div className="xl:col-span-9 space-y-6 w-full">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                       <div>
                         <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
