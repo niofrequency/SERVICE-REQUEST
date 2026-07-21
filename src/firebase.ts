@@ -1,9 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+import { getStorage } from "firebase/storage"; // <-- Add this
 
-// Direct configuration fallback using your project keys
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB4DlbCmB2a-pg_mNQPphx7pGRN3erZskM",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "service-request-2e06e.firebaseapp.com",
@@ -13,7 +12,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1857073292:web:fa0d3fbfe5f533b4414ba9"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app); // <
