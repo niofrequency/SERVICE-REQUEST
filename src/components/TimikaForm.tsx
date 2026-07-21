@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust path if needed
 import React, { useState, useRef, useEffect } from "react";
 import { 
   PriorityLevel, 
