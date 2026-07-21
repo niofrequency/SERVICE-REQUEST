@@ -79,11 +79,12 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
 
-  // Normal login/signup configuration
+  // Normal login/signup configuration (including Signature Capture)
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [signupFirstName, setSignupFirstName] = useState("");
   const [signupLastName, setSignupLastName] = useState("");
   const [signupLocation, setSignupLocation] = useState<LocationTeam>(LocationTeam.TIMIKA);
+  const [signatureInput, setSignatureInput] = useState("");
 
   // Role switching configuration
   const [currentRole, setCurrentRole] = useState<LocationTeam | "Admin">("Admin");
@@ -94,7 +95,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const isRegisteringRef = useRef(false);
 
-  // Mobile AI Scanner States
+  // Direct Mobile Photo Upload States
   const [isMobileScanning, setIsMobileScanning] = useState(false);
   const [mobileScanStatus, setMobileScanStatus] = useState<string | null>(null);
   const [mobileScanError, setMobileScanError] = useState<string | null>(null);
@@ -102,7 +103,7 @@ export default function App() {
   const [prefilledPhoto, setPrefilledPhoto] = useState<string | null>(null);
 
   // Authenticated technician state (Mapped local profile)
-  const [loggedInUser, setLoggedInUser] = useState<{ name: string; location: LocationTeam; email?: string } | null>(() => {
+  const [loggedInUser, setLoggedInUser] = useState<{ name: string; location: LocationTeam; email?: string; signature?: string } | null>(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
@@ -162,7 +163,7 @@ export default function App() {
         if (!loadedFromCache) {
           const defaultName = user.displayName || user.email?.split("@")[0] || "Operator";
           const defaultLoc = user.email === "mpigome44@gmail.com" ? LocationTeam.TIMIKA : LocationTeam.TIMIKA;
-          const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "" };
+          const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "", signature: "" };
           setLoggedInUser(defaultProfile);
           if (user.email === "mpigome44@gmail.com") {
             setCurrentRole("Admin");
@@ -180,7 +181,12 @@ export default function App() {
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
             const profile = docSnap.data();
-            const loggedIn = { name: profile.name, location: profile.location as LocationTeam, email: user.email || "" };
+            const loggedIn = { 
+              name: profile.name, 
+              location: profile.location as LocationTeam, 
+              email: user.email || "",
+              signature: profile.signature || ""
+            };
             setLoggedInUser(loggedIn);
             localStorage.setItem("user", JSON.stringify(loggedIn));
             if (user.email === "mpigome44@gmail.com") {
@@ -192,14 +198,15 @@ export default function App() {
             // Profile doesn't exist yet (e.g., first-time Google/Email sign-up completed in background)
             const defaultName = user.displayName || user.email?.split("@")[0] || "Operator";
             const defaultLoc = LocationTeam.TIMIKA;
-            const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "" };
+            const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "", signature: "" };
             
             try {
               await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 name: defaultName,
                 location: defaultLoc,
-                email: user.email || ""
+                email: user.email || "",
+                signature: ""
               });
             } catch (writeErr) {
               console.warn("Failed to create profile in Firestore (offline), using local defaults:", writeErr);
@@ -296,13 +303,14 @@ export default function App() {
           isRegisteringRef.current = true;
           const userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim().toLowerCase(), passwordInput);
           const user = userCredential.user;
-          const newUser = { name: "Admin", location: LocationTeam.TIMIKA, email: "mpigome44@gmail.com" };
+          const newUser = { name: "Admin", location: LocationTeam.TIMIKA, email: "mpigome44@gmail.com", signature: "" };
           
           await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: "Admin",
             location: LocationTeam.TIMIKA,
-            email: "mpigome44@gmail.com"
+            email: "mpigome44@gmail.com",
+            signature: ""
           });
           
           setLoggedInUser(newUser);
@@ -321,7 +329,7 @@ export default function App() {
     }
   };
 
-  // Handle Firebase Email/Password Registration (Sign Up with profile details)
+  // Handle Firebase Email/Password Registration (Sign Up with signature)
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -330,12 +338,8 @@ export default function App() {
       setAuthError("Email and Password are required to register.");
       return;
     }
-    if (!signupFirstName.trim()) {
-      setAuthError("First Name is required to register.");
-      return;
-    }
-    if (!signupLastName.trim()) {
-      setAuthError("Last Name is required to register.");
+    if (!signupFirstName.trim() || !signupLastName.trim()) {
+      setAuthError("Full Name is required to register.");
       return;
     }
     const fullName = `${signupFirstName.trim()} ${signupLastName.trim()}`;
@@ -351,7 +355,8 @@ export default function App() {
         firstName: signupFirstName.trim(),
         lastName: signupLastName.trim(),
         location: signupLocation,
-        email: emailInput.trim().toLowerCase()
+        email: emailInput.trim().toLowerCase(),
+        signature: signatureInput.trim()
       };
 
       // 3. Immediately set state and localStorage so the user can access the portal instantly
@@ -374,7 +379,8 @@ export default function App() {
         firstName: signupFirstName.trim(),
         lastName: signupLastName.trim(),
         location: signupLocation,
-        email: emailInput.trim().toLowerCase()
+        email: emailInput.trim().toLowerCase(),
+        signature: signatureInput.trim()
       }).catch((writeErr: any) => {
         console.warn("Resilient non-blocking warning: Failed to sync profile to Firestore database:", writeErr);
       });
@@ -418,85 +424,50 @@ export default function App() {
     localStorage.setItem("lang", next);
   };
 
-  // Mobile AI OCR Scanning Trigger
-  const handleMobileScanImage = async (base64Data: string) => {
+  // Direct Mobile Photo Upload Trigger (No AI Analysis)
+  const handleMobileScanImage = (base64Data: string) => {
     setIsMobileScanning(true);
-    setMobileScanStatus(language === "ENG" ? "Uploading & Analyzing Photo..." : "Mengunggah & Menganalisis Foto...");
     setMobileScanError(null);
-    try {
-      const response = await fetch("/api/ocr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Data }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "OCR failed");
-      }
-      const scannedCode = data.containerNumber || "";
-      if (!scannedCode) {
-        throw new Error(language === "ENG" ? "No container plate detected. Try a clearer angle." : "Tidak ada nomor kontainer terdeteksi. Coba sudut lain.");
-      }
-
-      setMobileScanStatus(language === "ENG" ? `Plate Detected: ${scannedCode}` : `Pelat Terdeteksi: ${scannedCode}`);
-      
-      // Determine behavior by current role
-      if (currentRole === LocationTeam.SURABAYA) {
-        // Look up open/active request (WAITING or IN_PROGRESS)
-        const normalizedScanned = scannedCode.toUpperCase().replace(/[\s-]+/g, "");
-        const activeMatch = requests.find((r) => {
-          const reqCode = r.containerNumber.toUpperCase().replace(/[\s-]+/g, "");
-          return reqCode === normalizedScanned && (r.status === RequestStatus.WAITING || r.status === RequestStatus.IN_PROGRESS);
-        });
-
-        if (activeMatch) {
-          setMobileScanStatus(language === "ENG" ? `Marking ${activeMatch.id} as Finished...` : `Menandai ${activeMatch.id} Selesai...`);
-          
-          await handleStatusUpdate(activeMatch.id, {
-            status: RequestStatus.DONE,
-            operator: loggedInUser?.name || "Surabaya Technician",
-            location: LocationTeam.SURABAYA,
-            notes: `Repair completed automatically via Mobile AI Photo Scan of container number ${scannedCode}.`,
-            resolutionNotes: `Verified container plate ${scannedCode}. Structural repair / maintenance completed.`,
-            repairPhotoUrl: base64Data
-          });
-          
-          setMobileScanStatus(
-            language === "ENG" 
-              ? `Success! Ticket ${activeMatch.id} (${scannedCode}) is now marked as DONE.` 
-              : `Sukses! Tiket ${activeMatch.id} (${scannedCode}) telah selesai.`
-          );
-        } else {
-          setMobileScanError(
-            language === "ENG" 
-              ? `Detected ${scannedCode} but no active service request is open for it.` 
-              : `Terdeteksi ${scannedCode} tetapi tidak ada permintaan layanan aktif.`
-          );
-        }
-      } else {
-        // For Timika port / Admin role:
-        setPrefilledContainerNumber(scannedCode);
-        setPrefilledPhoto(base64Data);
+    
+    if (currentRole === LocationTeam.SURABAYA) {
+      // In Surabaya mode: Attach completion photo to the currently selected active ticket
+      if (selectedRequest && (selectedRequest.status === RequestStatus.WAITING || selectedRequest.status === RequestStatus.IN_PROGRESS)) {
+        setMobileScanStatus(language === "ENG" ? `Attaching completion photo to ${selectedRequest.id}...` : `Melampirkan foto selesai ke ${selectedRequest.id}...`);
         
-        setMobileScanStatus(
+        handleStatusUpdate(selectedRequest.id, {
+          status: RequestStatus.DONE,
+          operator: loggedInUser?.name || "Surabaya Technician",
+          location: LocationTeam.SURABAYA,
+          notes: "Repair completed with direct mobile photo upload.",
+          resolutionNotes: "Structural repair / maintenance completed and verified via mobile photo.",
+          repairPhotoUrl: base64Data
+        });
+        
+        setMobileScanStatus(language === "ENG" ? `Success! Photo attached and ${selectedRequest.id} marked as DONE.` : `Sukses! Foto terlampir & ${selectedRequest.id} selesai.`);
+      } else {
+        setMobileScanError(
           language === "ENG" 
-            ? `Prefilled ${scannedCode}! Please describe its condition in the form below.` 
-            : `Terisi otomatis ${scannedCode}! Silakan isi kondisi kontainer pada formulir di bawah.`
+            ? "Please click an active ticket from the list first before capturing a repair completion photo!" 
+            : "Silakan klik tiket aktif dari daftar terlebih dahulu sebelum mengambil foto penyelesaian!"
         );
-
-        // Scroll and focus
-        setTimeout(() => {
-          const el = document.getElementById("form-container-number");
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            el.focus();
-          }
-        }, 300);
       }
-    } catch (err: any) {
-      console.error(err);
-      setMobileScanError(err.message || "Failed to analyze photo");
+    } else {
+      // In Timika / Admin mode: Instantly attach to the intake form
+      setPrefilledPhoto(base64Data);
+      setMobileScanStatus(language === "ENG" ? "Photo Attached! Please fill in the container details below." : "Foto Terlampir! Silakan lengkapi detail kontainer di bawah.");
+      
+      setTimeout(() => {
+        const el = document.getElementById("form-container-number");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.focus();
+        }
+      }, 300);
     }
+
+    setTimeout(() => {
+      setIsMobileScanning(false);
+    }, 3500);
   };
 
   // Handle Firestore Request Submission (passed to TimikaForm)
@@ -760,7 +731,7 @@ export default function App() {
     );
   }
 
-  // Unified Secure login/signup portal
+  // Unified Secure login/signup portal (With Signature field)
   if (!firebaseUser || !loggedInUser) {
     return (
       <div className="min-h-screen bg-[#090d16] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-950/40 via-[#090d16] to-[#090d16] flex flex-col justify-between text-slate-100 font-sans relative overflow-hidden">
@@ -811,8 +782,8 @@ export default function App() {
                       ? "Sign in with your email and secure company password." 
                       : "Masuk dengan email dan kata sandi aman perusahaan Anda.")
                   : (language === "ENG"
-                      ? "Register your callsign and select your duty branch location."
-                      : "Daftar callsign Anda dan pilih lokasi cabang tugas Anda.")}
+                      ? "Register your callsign, branch location, and digital signature stamp."
+                      : "Daftar callsign, cabang tugas, dan tanda tangan digital Anda.")}
               </p>
             </div>
 
@@ -881,7 +852,7 @@ export default function App() {
                 </div>
               </form>
             ) : (
-              // Sign Up Form (Includes operator name and branch selection)
+              // Sign Up Form (Includes operator name, branch selection, and signature)
               <form onSubmit={handleEmailSignUp} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -940,6 +911,19 @@ export default function App() {
                       SURABAYA
                     </button>
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-mono uppercase tracking-wider font-bold text-slate-400">
+                    {language === "ENG" ? "DIGITAL SIGNATURE / INITIALS" : "TANDA TANGAN / INISIAL"}
+                  </label>
+                  <input
+                    type="text"
+                    value={signatureInput}
+                    onChange={(e) => setSignatureInput(e.target.value)}
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all font-serif italic"
+                    placeholder="e.g. Y. Kogoya (Appears on printouts)"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -1019,201 +1003,196 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col text-slate-900 font-sans pb-20 sm:pb-0 w-full overflow-x-hidden">
-      {/* Real-time sync Header */}
-      <Header
-        currentRole={currentRole}
-        onRoleChange={(role) => setCurrentRole(role)}
-        isPolling={isPolling}
-        onRefresh={() => {}}
-        language={language}
-        onLanguageToggle={toggleLanguage}
-        loggedInUser={loggedInUser}
-        onLogOut={handleLogOut}
-        onScanImage={handleMobileScanImage}
-      />
+    <div className="min-h-screen bg-slate-50/50 flex flex-col text-slate-900 font-sans pb-20 sm:pb-0 w-full overflow-x-hidden print:bg-white print:overflow-visible print:min-h-0 print:pb-0 print:block">
+      
+      {/* 1. NORMAL APPLICATION UI (HIDDEN IN PRINT MODE) */}
+      <div className="print:hidden flex-1 flex flex-col w-full">
+        {/* Real-time sync Header */}
+        <Header
+          currentRole={currentRole}
+          onRoleChange={(role) => setCurrentRole(role)}
+          isPolling={isPolling}
+          onRefresh={() => {}}
+          language={language}
+          onLanguageToggle={toggleLanguage}
+          loggedInUser={loggedInUser}
+          onLogOut={handleLogOut}
+          onScanImage={handleMobileScanImage}
+        />
 
-      {/* Mobile Scanning Loading State / Notification Toast */}
-      {isMobileScanning && (
-        <div className="fixed bottom-20 left-4 right-4 bg-slate-950/95 backdrop-blur border border-blue-500/30 text-white rounded-xl p-4 shadow-2xl z-50 flex items-center space-x-3.5 animate-bounce">
-          <div className="relative w-8 h-8 shrink-0 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-2 border-blue-500/20"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin"></div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-mono font-bold tracking-wider text-blue-400 uppercase">
-              AI Mobile Assistant
-            </p>
-            <p className="text-xs font-bold truncate mt-0.5">
-              {mobileScanStatus}
-            </p>
-            {mobileScanError && (
-              <p className="text-[10px] text-rose-400 mt-1 leading-normal font-medium">
-                ⚠️ {mobileScanError}
+        {/* Direct Mobile Upload Notification Toast */}
+        {isMobileScanning && (
+          <div className="fixed bottom-20 left-4 right-4 bg-slate-950/95 backdrop-blur border border-blue-500/30 text-white rounded-xl p-4 shadow-2xl z-50 flex items-center space-x-3.5 animate-fade-in">
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-mono font-bold tracking-wider text-blue-400 uppercase">
+                Direct Photo Attachment
               </p>
-            )}
-          </div>
-          {mobileScanError && (
+              <p className="text-xs font-bold truncate mt-0.5">
+                {mobileScanStatus}
+              </p>
+              {mobileScanError && (
+                <p className="text-[10px] text-rose-400 mt-1 leading-normal font-medium">
+                  ⚠️ {mobileScanError}
+                </p>
+              )}
+            </div>
             <button 
               onClick={() => setIsMobileScanning(false)}
               className="text-white hover:text-slate-300 font-bold text-xs p-1"
             >
               &times;
             </button>
-          )}
-        </div>
-      )}
-
-      <main className="flex-1 max-w-[1920px] w-full mx-auto p-4 sm:p-6 lg:px-8 space-y-6 relative min-h-[500px]">
-        {isLoading && (
-          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/45 backdrop-blur-md rounded-2xl py-20 space-y-4">
-            <div className="w-64 h-1.5 bg-slate-200/80 rounded-full overflow-hidden relative border border-slate-300/40">
-              <div className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full w-1/2 animate-load-bar" />
-            </div>
-            <p className="text-[10px] font-mono font-bold text-slate-500 tracking-wider uppercase">
-              {language === "ENG" ? "Synching PT. PANJASA-INTRADIN Port Database..." : "Sinkronisasi Database Pelabuhan PT. PANJASA-INTRADIN..."}
-            </p>
           </div>
         )}
 
-        <div className={`space-y-6 ${isLoading ? "blur-sm pointer-events-none opacity-80 select-none" : "animate-fade-in"}`}>
-          {/* Error notification banner */}
-          {error && (
-            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-800 p-3.5 rounded-xl flex items-center space-x-3 text-xs animate-pulse shadow-sm">
-              <AlertTriangle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
-              <div>
-                <span className="font-bold">Sync Error:</span> {error} — Operating in fallback mode.
+        <main className="flex-1 max-w-[1920px] w-full mx-auto p-4 sm:p-6 lg:px-8 space-y-6 relative min-h-[500px]">
+          {isLoading && (
+            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/45 backdrop-blur-md rounded-2xl py-20 space-y-4">
+              <div className="w-64 h-1.5 bg-slate-200/80 rounded-full overflow-hidden relative border border-slate-300/40">
+                <div className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full w-1/2 animate-load-bar" />
               </div>
+              <p className="text-[10px] font-mono font-bold text-slate-500 tracking-wider uppercase">
+                {language === "ENG" ? "Synching PT. PANJASA-INTRADIN Port Database..." : "Sinkronisasi Database Pelabuhan PT. PANJASA-INTRADIN..."}
+              </p>
             </div>
           )}
 
-        {/* Port Status Scoreboard */}
-        <div className="space-y-3.5">
-          <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
-            <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              {language === "ENG" ? "Real-Time Container Service Pipelines" : "Pipa Layanan Kontainer Real-Time"}
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-              {language === "ENG" 
-                ? "The status counters below track current service requests as they move from intake to completion. They represent:"
-                : "Penghitung status di bawah memantau permintaan layanan saat ini dari mulai masuk hingga selesai. Keterangannya:"}
-            </p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-2.5 text-[10px] font-mono text-slate-600">
-              <li className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <span><strong>{t.statTotal}:</strong> {language === "ENG" ? "All submitted requests" : "Semua permintaan masuk"}</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span><strong>{t.statAwaiting}:</strong> {language === "ENG" ? "Queued / awaiting attention" : "Antrean / menunggu ditindak"}</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <span><strong>{t.statInProgress}:</strong> {language === "ENG" ? "Currently being repaired" : "Sedang dalam perbaikan fisik"}</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span><strong>{t.statCompleted}:</strong> {language === "ENG" ? "Repairs certified & done" : "Selesai & disertifikasi"}</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                <span><strong>{t.statCancelled}:</strong> {language === "ENG" ? "Voided or cancelled tasks" : "Dibatalkan atau dibatalkan"}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-            
-            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-              <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg group-hover:scale-105 transition-transform">
-                <ClipboardList className="h-5 w-5" />
+          <div className={`space-y-6 ${isLoading ? "blur-sm pointer-events-none opacity-80 select-none" : "animate-fade-in"}`}>
+            {/* Error notification banner */}
+            {error && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-800 p-3.5 rounded-xl flex items-center space-x-3 text-xs animate-pulse shadow-sm">
+                <AlertTriangle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
+                <div>
+                  <span className="font-bold">Sync Error:</span> {error} — Operating in fallback mode.
+                </div>
               </div>
-              <div>
-                <span className="block text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider">{t.statTotal}</span>
-                <span className="text-xl font-extrabold font-mono text-slate-800 leading-tight">{totalTickets}</span>
+            )}
+
+            {/* Port Status Scoreboard */}
+            <div className="space-y-3.5">
+              <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
+                <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  {language === "ENG" ? "Real-Time Container Service Pipelines" : "Pipa Layanan Kontainer Real-Time"}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  {language === "ENG" 
+                    ? "The status counters below track current service requests as they move from intake to completion. They represent:"
+                    : "Penghitung status di bawah memantau permintaan layanan saat ini dari mulai masuk hingga selesai. Keterangannya:"}
+                </p>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-2.5 text-[10px] font-mono text-slate-600">
+                  <li className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <span><strong>{t.statTotal}:</strong> {language === "ENG" ? "All submitted requests" : "Semua permintaan masuk"}</span>
+                  </li>
+                  <li className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span><strong>{t.statAwaiting}:</strong> {language === "ENG" ? "Queued / awaiting attention" : "Antrean / menunggu ditindak"}</span>
+                  </li>
+                  <li className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span><strong>{t.statInProgress}:</strong> {language === "ENG" ? "Currently being repaired" : "Sedang dalam perbaikan fisik"}</span>
+                  </li>
+                  <li className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span><strong>{t.statCompleted}:</strong> {language === "ENG" ? "Repairs certified & done" : "Selesai & disertifikasi"}</span>
+                  </li>
+                  <li className="flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span><strong>{t.statCancelled}:</strong> {language === "ENG" ? "Voided or cancelled tasks" : "Dibatalkan atau dibatalkan"}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
+                  <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg group-hover:scale-105 transition-transform">
+                    <ClipboardList className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider">{t.statTotal}</span>
+                    <span className="text-xl font-extrabold font-mono text-slate-800 leading-tight">{totalTickets}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
+                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg group-hover:scale-105 transition-transform">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-amber-500 uppercase font-bold tracking-wider">{t.statAwaiting}</span>
+                    <span className="text-xl font-extrabold font-mono text-amber-600 leading-tight">{waitingTickets}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-105 transition-transform">
+                    <BarChart3 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-blue-500 uppercase font-bold tracking-wider">{t.statInProgress}</span>
+                    <span className="text-xl font-extrabold font-mono text-blue-600 leading-tight">{activeRepairs}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
+                  <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-105 transition-transform">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-emerald-500 uppercase font-bold tracking-wider">{t.statCompleted}</span>
+                    <span className="text-xl font-extrabold font-mono text-emerald-600 leading-tight">{completedJobs}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group col-span-2 md:col-span-1">
+                  <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg group-hover:scale-105 transition-transform">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-rose-500 uppercase font-bold tracking-wider">{t.statCancelled}</span>
+                    <span className="text-xl font-extrabold font-mono text-rose-600 leading-tight">{cancelledJobs}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg group-hover:scale-105 transition-transform">
-                <Clock className="h-5 w-5" />
+            {/* Data & Export utilities panel */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <Database className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="block text-[11px] font-mono font-extrabold text-slate-900 uppercase tracking-wider">
+                    {language === "ENG" ? "Ledger Records & Document Exporters" : "Arsip Ledger & Ekspor Dokumen"}
+                  </span>
+                  <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+                    {language === "ENG" 
+                      ? "Download real-time port logs directly to Excel (CSV) or trigger systemic print templates for audit reporting (PDF)."
+                      : "Unduh log pelabuhan langsung ke Excel (CSV) atau cetak riwayat dengan format sistemik untuk laporan audit (PDF)."}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="block text-[10px] font-mono text-amber-500 uppercase font-bold tracking-wider">{t.statAwaiting}</span>
-                <span className="text-xl font-extrabold font-mono text-amber-600 leading-tight">{waitingTickets}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-105 transition-transform">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="block text-[10px] font-mono text-blue-500 uppercase font-bold tracking-wider">{t.statInProgress}</span>
-                <span className="text-xl font-extrabold font-mono text-blue-600 leading-tight">{activeRepairs}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-105 transition-transform">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="block text-[10px] font-mono text-emerald-500 uppercase font-bold tracking-wider">{t.statCompleted}</span>
-                <span className="text-xl font-extrabold font-mono text-emerald-600 leading-tight">{completedJobs}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group col-span-2 md:col-span-1">
-              <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg group-hover:scale-105 transition-transform">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="block text-[10px] font-mono text-rose-500 uppercase font-bold tracking-wider">{t.statCancelled}</span>
-                <span className="text-xl font-extrabold font-mono text-rose-600 leading-tight">{cancelledJobs}</span>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                <button
+                  onClick={handleExportCSV}
+                  className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>{language === "ENG" ? "Export Excel" : "Ekspor Excel"}</span>
+                </button>
+                <button
+                  onClick={handlePrintHistory}
+                  className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-slate-100 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>{language === "ENG" ? "Print History" : "Cetak Riwayat"}</span>
+                </button>
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* Data & Export utilities panel */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Database className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="block text-[11px] font-mono font-extrabold text-slate-900 uppercase tracking-wider">
-                {language === "ENG" ? "Ledger Records & Document Exporters" : "Arsip Ledger & Ekspor Dokumen"}
-              </span>
-              <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                {language === "ENG" 
-                  ? "Download real-time port logs directly to Excel (CSV) or trigger systemic print templates for audit reporting (PDF)."
-                  : "Unduh log pelabuhan langsung ke Excel (CSV) atau cetak riwayat dengan format sistemik untuk laporan audit (PDF)."}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
-            <button
-              onClick={handleExportCSV}
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>{language === "ENG" ? "Export Excel" : "Ekspor Excel"}</span>
-            </button>
-            <button
-              onClick={handlePrintHistory}
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-slate-100 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
-            >
-              <Printer className="h-4 w-4" />
-              <span>{language === "ENG" ? "Print History" : "Cetak Riwayat"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Main Workspace Layout */}
+            {/* Main Workspace Layout */}
             {/* 1. Timika View (Papua Field Technicians) */}
             {currentRole === LocationTeam.TIMIKA && (
               <TimikaForm
@@ -1232,7 +1211,7 @@ export default function App() {
               />
             )}
 
-            {/* 2. Surabaya View (Workshop Repairs) - Now hooked to handlePrintRequest */}
+            {/* 2. Surabaya View (Workshop Repairs) - Hooked to handlePrintRequest */}
             {currentRole === LocationTeam.SURABAYA && (
               <SurabayaDashboard
                 requests={requests}
@@ -1270,10 +1249,10 @@ export default function App() {
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
                           <span>TIMIKA FIELD OPERATIONS</span>
                         </h3>
-                        <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden lg:inline-block">AI ASSIST</span>
+                        <span className="text-[10px] bg-blue-500/10 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden lg:inline-block">DIRECT UPLOAD</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
-                        Field technicians log incoming container damages with real-time Gemini OCR automation.
+                        Field technicians attach damage documentation directly to incoming container logs.
                       </p>
                     </div>
                     <TimikaForm
@@ -1292,7 +1271,7 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Right Column: Surabaya Workshop Dashboard - Now hooked to handlePrintRequest */}
+                  {/* Right Column: Surabaya Workshop Dashboard - Hooked to handlePrintRequest */}
                   <div className="xl:col-span-9 space-y-6 w-full">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                       <div>
@@ -1318,23 +1297,40 @@ export default function App() {
                 </div>
               </div>
             )}
-        </div>
-      </main>
+          </div>
+        </main>
 
-      {/* Shared Ledger / Audit Trail Modal */}
-      {selectedRequest && (
-        <AuditTrailModal
-          request={selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          language={language}
-          onPrint={handlePrintRequest}
-          loggedInUser={loggedInUser}
-          onDeleteRequest={handleDeleteRequest}
-          onUpdateRequest={handleUpdateRequest}
-        />
-      )}
+        {/* Shared Ledger / Audit Trail Modal */}
+        {selectedRequest && (
+          <AuditTrailModal
+            request={selectedRequest}
+            onClose={() => setSelectedRequest(null)}
+            language={language}
+            onPrint={handlePrintRequest}
+            loggedInUser={loggedInUser}
+            onDeleteRequest={handleDeleteRequest}
+            onUpdateRequest={handleUpdateRequest}
+          />
+        )}
 
-      {/* ULTRA-COMPACT 1-PAGE GUARANTEE PRINT TEMPLATE */}
+        {/* High Density Status Footer */}
+        <footer className="h-8 bg-slate-200 border-t border-slate-300 flex items-center px-4 justify-between text-[10px] shrink-0 font-mono uppercase tracking-tight text-slate-500 mt-auto">
+          <div className="flex gap-6 overflow-hidden">
+            <div className="flex items-center gap-1">
+              <span className="text-blue-600 font-bold">SYSTEM:</span> REAL-TIME CONNECTED (SYNC: 200ms)
+            </div>
+            <div className="flex items-center gap-1 hidden md:flex">
+              <span className="text-blue-600 font-bold">NODE SECURITY:</span> AES-256 • DIRECT ATTACHMENT v2.5
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:inline">PT. PANJASA-INTRADIN &copy; 2026</span>
+            <span className="text-slate-400">TIMIKA &amp; SURABAYA HUB</span>
+          </div>
+        </footer>
+      </div>
+
+      {/* 2. ULTRA-COMPACT 1-PAGE GUARANTEE PRINT TEMPLATE (WITH SIGNATURE STAMP) */}
       {printData && (
         <div id="printable-area" className="hidden print:block print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 text-black font-sans bg-white">
           {printData.type === "unit" ? (
@@ -1416,9 +1412,17 @@ export default function App() {
                       </div>
                       <div className="p-2 flex flex-col justify-between items-center text-center h-16">
                         <span className="font-bold uppercase text-[9px] tracking-wider text-gray-400">Sign / Verification Stamp</span>
-                        <div className="border-t border-dashed border-gray-400 w-44 mx-auto text-center text-[8px] text-gray-500 mt-auto pt-0.5">
-                          Authorized Field Inspector
-                        </div>
+                        
+                        {/* Render Saved User Signature or Initials */}
+                        {loggedInUser?.signature ? (
+                          <div className="my-auto font-serif italic font-bold text-sm text-black border-b border-gray-400 px-4">
+                            {loggedInUser.signature}
+                          </div>
+                        ) : (
+                          <div className="border-t border-dashed border-gray-400 w-44 mx-auto text-center text-[8px] text-gray-500 mt-auto pt-0.5">
+                            Authorized Field Inspector
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1579,22 +1583,6 @@ export default function App() {
           )}
         </div>
       )}
-
-      {/* High Density Status Footer */}
-      <footer className="h-8 bg-slate-200 border-t border-slate-300 flex items-center px-4 justify-between text-[10px] shrink-0 font-mono uppercase tracking-tight text-slate-500 mt-auto">
-        <div className="flex gap-6 overflow-hidden">
-          <div className="flex items-center gap-1">
-            <span className="text-blue-600 font-bold">SYSTEM:</span> REAL-TIME CONNECTED (SYNC: 200ms)
-          </div>
-          <div className="flex items-center gap-1 hidden md:flex">
-            <span className="text-blue-600 font-bold">NODE SECURITY:</span> AES-256 • GEMINI OCR v2.5
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:inline">PT. PANJASA-INTRADIN &copy; 2026</span>
-          <span className="text-slate-400">TIMIKA &amp; SURABAYA HUB</span>
-        </div>
-      </footer>
     </div>
   );
 }
