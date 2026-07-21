@@ -78,7 +78,7 @@ export default function Header({
 
   return (
     <>
-      {/* Desktop Header - Changed max-w-7xl mx-auto to w-full so it stretches edge-to-edge */}
+      {/* Desktop Header */}
       <header className="hidden sm:block w-full bg-slate-950 text-white border-b border-slate-800 shadow-md shrink-0 relative z-20">
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
         <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5">
@@ -86,10 +86,14 @@ export default function Header({
             
             {/* Left Block: Brand and Clocks */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-              {/* Brand & Identity */}
+              {/* Brand & Identity with Custom Logo */}
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center font-black text-lg italic shadow-lg shadow-blue-500/20 text-white select-none shrink-0">
-                  PI
+                <div className="h-10 flex items-center justify-center select-none shrink-0">
+                  <img 
+                    src="img/panjasa-intradin_logo.png" 
+                    alt="PT. Panjasa Intradin Logo" 
+                    className="h-9 w-auto object-contain"
+                  />
                 </div>
                 <div>
                   <h1 className="text-sm font-extrabold tracking-tight uppercase font-sans text-slate-100 leading-none">
@@ -224,7 +228,7 @@ export default function Header({
         </div>
       </header>
 
-      {/* Mobile Bottom Header Bar - Removed max-w-lg mx-auto to stretch full width */}
+      {/* Mobile Bottom Header Bar */}
       <header className="block sm:hidden fixed bottom-0 left-0 right-0 w-full bg-slate-950 border-t border-slate-800 z-50 h-16 shadow-2xl pb-safe text-white">
         <div className="grid grid-cols-5 h-full w-full px-2">
           {/* Button 1: Role Switcher / Indicator */}
