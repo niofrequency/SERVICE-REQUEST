@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase'; // Adjust path if needed
 import React, { useState, useRef, useEffect } from "react";
+import { doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase"; // Adjust path if needed
 import { 
   PriorityLevel, 
   IssueCategory, 
@@ -11,17 +10,17 @@ import {
 } from "../types.js";
 import { 
   Camera, 
-  Upload, 
   AlertTriangle, 
   Cpu, 
   CheckCircle, 
-  Clock, 
-  Eye, 
   User, 
   ClipboardList, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Edit2,
+  Trash2,
+  X,
+  Save
 } from "lucide-react";
-
 import { locales } from "../locales.js";
 
 interface TimikaFormProps {
@@ -89,6 +88,13 @@ export default function TimikaForm({
   const [reporterName, setReporterName] = useState(() => loggedInUser?.name || "");
   const [photo, setPhoto] = useState<string | null>(null);
 
+  // Edit Card State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editPriority, setEditPriority] = useState<PriorityLevel>(PriorityLevel.MEDIUM);
+  const [editCategory, setEditCategory] = useState<IssueCategory>(IssueCategory.STRUCTURAL);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Prefill from external AI Scanner
   useEffect(() => {
     if (prefilledContainerNumber) {
@@ -122,12 +128,56 @@ export default function TimikaForm({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delete Request Handler
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
+      try {
+        await deleteDoc(doc(db, "requests", id));
+      } catch (error: any) {
+        console.error("Error deleting request: ", error);
+        alert(error.message || "Failed to delete request. Check security rules.");
+      }
+    }
+  };
+
+  // Start Edit Mode Handler
+  const startEdit = (e: React.MouseEvent, req: ServiceRequest) => {
+    e.stopPropagation();
+    setEditingId(req.id);
+    setEditDescription(req.description || "");
+    setEditPriority(req.priority || PriorityLevel.MEDIUM);
+    setEditCategory(req.category || IssueCategory.STRUCTURAL);
+  };
+
+  // Save Edit Handler
+  const handleUpdate = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!editDescription.trim()) return;
+    
+    setIsUpdating(true);
+    try {
+      const reqRef = doc(db, "requests", id);
+      await updateDoc(reqRef, {
+        description: editDescription,
+        priority: editPriority,
+        category: editCategory,
+        updatedAt: new Date().toISOString()
+      });
+      setEditingId(null);
+    } catch (error: any) {
+      console.error("Error updating request: ", error);
+      alert(error.message || "Failed to update request.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Run the actual backend OCR API
   const runOcrScanner = async (imageDataUrl: string) => {
     setIsScanning(true);
     setScanProgress(10);
 
-    // Progress simulation
     const interval = setInterval(() => {
       setScanProgress((prev) => {
         if (prev >= 90) {
@@ -189,7 +239,6 @@ export default function TimikaForm({
       return;
     }
 
-    // Standard ISO 6346 validation check (typically 4 letters and 7 numbers)
     const cleanNum = containerNumber.replace(/[^a-zA-Z0-9]/g, "");
     if (cleanNum.length < 8) {
       setSubmitError("Warning: Container number seems too short. Ensure valid ISO 6346 code (e.g. MSKU 491028 3)");
@@ -234,7 +283,6 @@ export default function TimikaForm({
 
         const data = await response.json();
         if (response.ok) {
-          // Reset Form
           setContainerNumber("");
           setDescription("");
           setPhoto(null);
@@ -257,7 +305,6 @@ export default function TimikaForm({
 
       {/* Form & AI Scanner Column */}
       <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative">
-        {/* Permission warning overlay overlaying the form controls if unauthorized */}
         {!isAuthorized && (
           <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm shadow-2xl text-white space-y-4">
@@ -317,7 +364,6 @@ export default function TimikaForm({
                       <span className="text-[11px] font-mono font-semibold text-blue-400 animate-pulse uppercase tracking-widest">
                         Scanning Plate ({scanProgress}%)
                       </span>
-                      {/* Laser Line Animation */}
                       <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/80 shadow-[0_0_10px_#3b82f6] animate-bounce" />
                     </div>
                   )}
@@ -369,7 +415,6 @@ export default function TimikaForm({
         {/* Create Request Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Container Number */}
             <div>
               <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5 flex items-center justify-between">
                 <span>{t.containerIdLabel} *</span>
@@ -404,7 +449,6 @@ export default function TimikaForm({
               </div>
             </div>
 
-            {/* Reporter Name (Always read-only and pre-filled with active loggedInUser name) */}
             <div>
               <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
                 {t.inspectorNameLabel} *
@@ -421,7 +465,6 @@ export default function TimikaForm({
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
               {t.descriptionLabel} *
@@ -515,7 +558,9 @@ export default function TimikaForm({
               return (
                 <div
                   key={req.id}
-                  onClick={() => onSelectRequest(req)}
+                  onClick={() => {
+                    if (editingId !== req.id) onSelectRequest(req);
+                  }}
                   className="bg-white p-4 rounded-xl border border-slate-200/70 hover:border-blue-400 transition-all cursor-pointer shadow-sm relative group space-y-2 hover:-translate-y-0.5"
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -527,22 +572,101 @@ export default function TimikaForm({
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-sans">
-                    {req.description}
-                  </p>
+                  {/* Inline Edit Mode vs Normal View Mode */}
+                  {editingId === req.id ? (
+                    <div className="space-y-3 pt-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select 
+                          value={editPriority} 
+                          onChange={(e) => setEditPriority(e.target.value as PriorityLevel)}
+                          className="text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                        >
+                          <option value={PriorityLevel.LOW}>LOW</option>
+                          <option value={PriorityLevel.MEDIUM}>MEDIUM</option>
+                          <option value={PriorityLevel.HIGH}>HIGH</option>
+                          <option value={PriorityLevel.URGENT}>URGENT</option>
+                        </select>
 
-                  <div className="flex items-center gap-2 justify-between border-t border-slate-100 pt-2 text-[10px]">
-                    <div className="flex gap-2 items-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${priorityColors[req.priority]}`}>
-                        {displayPrio}
-                      </span>
-                      <span className="text-slate-400 text-[10px] font-mono uppercase truncate max-w-[120px]">{displayCat}</span>
+                        <select 
+                          value={editCategory} 
+                          onChange={(e) => setEditCategory(e.target.value as IssueCategory)}
+                          className="text-xs font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                        >
+                          <option value={IssueCategory.ELECTRICAL}>Electrical</option>
+                          <option value={IssueCategory.STRUCTURAL}>Structural</option>
+                          <option value={IssueCategory.REFRIGERATION_TELEMATICS}>Refrig/Telematics</option>
+                          <option value={IssueCategory.MECHANICAL}>Mechanical</option>
+                        </select>
+                      </div>
+                      
+                      <textarea 
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-blue-500 resize-none font-sans"
+                        rows={3}
+                      />
+                      
+                      <div className="flex gap-2 justify-end pt-1">
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingId(null);
+                          }}
+                          className="px-3 py-1.5 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium flex items-center gap-1"
+                        >
+                          <X className="h-3 w-3" /> Cancel
+                        </button>
+                        <button 
+                          type="button"
+                          disabled={isUpdating}
+                          onClick={(e) => handleUpdate(e, req.id)}
+                          className="px-3 py-1.5 text-xs text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-1 shadow-sm disabled:opacity-50"
+                        >
+                          <Save className="h-3 w-3" /> {isUpdating ? "Saving..." : "Save"}
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-slate-400 flex items-center space-x-1 font-mono text-[10px]">
-                      <User className="h-3 w-3 text-slate-300" />
-                      <span>{req.reporterName}</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-sans">
+                        {req.description}
+                      </p>
+
+                      <div className="flex items-center gap-2 justify-between border-t border-slate-100 pt-2 text-[10px]">
+                        <div className="flex gap-2 items-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${priorityColors[req.priority]}`}>
+                            {displayPrio}
+                          </span>
+                          <span className="text-slate-400 text-[10px] font-mono uppercase truncate max-w-[120px]">{displayCat}</span>
+                        </div>
+                        <div className="text-slate-400 flex items-center space-x-1 font-mono text-[10px]">
+                          <User className="h-3 w-3 text-slate-300" />
+                          <span>{req.reporterName}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons: Visible only if user is authorized TIMIKA or ADMIN */}
+                      {isAuthorized && (
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100/80 mt-1" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            type="button"
+                            onClick={(e) => startEdit(e, req)}
+                            className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit2 className="h-3 w-3" /> Edit
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => handleDelete(e, req.id)}
+                            className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   {/* Complete repair status banner */}
                   {req.status === RequestStatus.DONE && (
