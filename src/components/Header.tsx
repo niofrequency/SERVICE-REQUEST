@@ -78,17 +78,17 @@ export default function Header({
 
   return (
     <>
-      {/* Desktop Header */}
-      <header className="hidden sm:block bg-slate-950 text-white border-b border-slate-800 shadow-md shrink-0 relative z-20">
+      {/* Desktop Header - Changed max-w-7xl mx-auto to w-full so it stretches edge-to-edge */}
+      <header className="hidden sm:block w-full bg-slate-950 text-white border-b border-slate-800 shadow-md shrink-0 relative z-20">
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full">
             
             {/* Left Block: Brand and Clocks */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               {/* Brand & Identity */}
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center font-black text-lg italic shadow-lg shadow-blue-500/20 text-white select-none">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center font-black text-lg italic shadow-lg shadow-blue-500/20 text-white select-none shrink-0">
                   PI
                 </div>
                 <div>
@@ -102,10 +102,10 @@ export default function Header({
               </div>
 
               {/* Timezones Divider */}
-              <div className="hidden sm:block h-6 w-[1px] bg-slate-800" />
+              <div className="hidden sm:block h-6 w-[1px] bg-slate-800 shrink-0" />
 
               {/* Real-time Timezone Clocks */}
-              <div className="flex items-center space-x-3 bg-slate-900/60 py-1.5 px-3 rounded-lg border border-slate-800/80 text-[11px] font-mono w-fit">
+              <div className="flex items-center space-x-3 bg-slate-900/60 py-1.5 px-3 rounded-lg border border-slate-800/80 text-[11px] font-mono w-fit shrink-0">
                 <div className="text-center border-r border-slate-800 pr-3">
                   <span className="block text-[8px] text-amber-500 uppercase font-bold tracking-wider mb-0.5">
                     {t.clockSurabaya}
@@ -191,9 +191,9 @@ export default function Header({
 
               {/* Profile Info and Logout on the FAR RIGHT */}
               {loggedInUser && (
-                <div className="flex items-center space-x-3 bg-slate-900 hover:bg-slate-800/80 transition-all pl-3 pr-1 py-1 rounded-lg border border-slate-800 text-xs shadow-md">
+                <div className="flex items-center space-x-3 bg-slate-900 hover:bg-slate-800/80 transition-all pl-3 pr-1 py-1 rounded-lg border border-slate-800 text-xs shadow-md shrink-0">
                   <div className="flex items-center space-x-2 font-sans">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-md flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-md flex items-center justify-center font-bold text-[10px] uppercase shadow-sm shrink-0">
                       {loggedInUser.name.charAt(0)}
                     </div>
                     <div className="text-left leading-tight">
@@ -206,11 +206,11 @@ export default function Header({
                     </div>
                   </div>
                   
-                  <div className="h-5 w-[1px] bg-slate-800" />
+                  <div className="h-5 w-[1px] bg-slate-800 shrink-0" />
                   
                   <button
                     onClick={onLogOut}
-                    className="flex items-center space-x-1 px-2.5 py-1.5 hover:bg-rose-500/10 hover:text-rose-400 text-slate-400 transition-colors rounded-md text-[10px] font-mono uppercase font-bold cursor-pointer"
+                    className="flex items-center space-x-1 px-2.5 py-1.5 hover:bg-rose-500/10 hover:text-rose-400 text-slate-400 transition-colors rounded-md text-[10px] font-mono uppercase font-bold cursor-pointer shrink-0"
                     title={t.logOut}
                   >
                     <LogOut className="h-3.5 w-3.5" />
@@ -224,9 +224,9 @@ export default function Header({
         </div>
       </header>
 
-      {/* Mobile Bottom Header Bar */}
-      <header className="block sm:hidden fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50 h-16 shadow-2xl pb-safe text-white">
-        <div className="grid grid-cols-5 h-full w-full max-w-lg mx-auto">
+      {/* Mobile Bottom Header Bar - Removed max-w-lg mx-auto to stretch full width */}
+      <header className="block sm:hidden fixed bottom-0 left-0 right-0 w-full bg-slate-950 border-t border-slate-800 z-50 h-16 shadow-2xl pb-safe text-white">
+        <div className="grid grid-cols-5 h-full w-full px-2">
           {/* Button 1: Role Switcher / Indicator */}
           {loggedInUser?.email === "mpigome44@gmail.com" ? (
             <button
@@ -268,7 +268,7 @@ export default function Header({
             </span>
           </button>
 
-          {/* Button 3: Scan Camera (Centered, same size as other buttons) */}
+          {/* Button 3: Scan Camera */}
           <button
             id="mobile-scan-btn"
             onClick={() => mobileFileInputRef.current?.click()}
