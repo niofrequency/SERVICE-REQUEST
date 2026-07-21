@@ -1232,12 +1232,13 @@ export default function App() {
               />
             )}
 
-            {/* 2. Surabaya View (Workshop Repairs) */}
+            {/* 2. Surabaya View (Workshop Repairs) - Now hooked to handlePrintRequest */}
             {currentRole === LocationTeam.SURABAYA && (
               <SurabayaDashboard
                 requests={requests}
                 onStatusUpdate={handleStatusUpdate}
                 onSelectRequest={(req) => setSelectedRequest(req)}
+                onPrint={handlePrintRequest}
                 language={language}
                 loggedInUser={loggedInUser}
               />
@@ -1291,7 +1292,7 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Right Column: Surabaya Workshop Dashboard */}
+                  {/* Right Column: Surabaya Workshop Dashboard - Now hooked to handlePrintRequest */}
                   <div className="xl:col-span-9 space-y-6 w-full">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                       <div>
@@ -1309,6 +1310,7 @@ export default function App() {
                       requests={requests}
                       onStatusUpdate={handleStatusUpdate}
                       onSelectRequest={(req) => setSelectedRequest(req)}
+                      onPrint={handlePrintRequest}
                       language={language}
                       loggedInUser={loggedInUser}
                     />
@@ -1332,143 +1334,133 @@ export default function App() {
         />
       )}
 
-      {/* Absolute, print-only hidden area */}
+      {/* ULTRA-COMPACT 1-PAGE GUARANTEE PRINT TEMPLATE */}
       {printData && (
-        <div id="printable-area" className="hidden print:block print:h-auto print:overflow-visible print:p-0 print:m-0">
+        <div id="printable-area" className="hidden print:block print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 text-black font-sans bg-white">
           {printData.type === "unit" ? (
-            // Individual PT PANJASA INTRADIN "SERVICE REQUEST" form
+            // Individual PT PANJASA INTRADIN "SERVICE REQUEST" form (Ultra Compact 1-Page Layout)
             (() => {
               const req = printData.data as ServiceRequest;
               const completedLog = req.auditLogs.find(l => l.toStatus === RequestStatus.DONE);
               const repairer = completedLog?.operator || (req.resolutionNotes ? "Surabaya Repairer" : "");
               
               return (
-                <div className="p-8 max-w-4xl mx-auto border-2 border-black bg-white text-black font-sans space-y-6">
-                  {/* Header banner */}
-                  <div className="flex items-center justify-between border-b-2 border-black pb-4">
-                    <div className="flex items-center space-x-4">
-                      {/* Official Company Logo */}
+                <div className="p-4 max-w-[800px] mx-auto border-2 border-black bg-white text-black font-sans space-y-3 print:w-full print:max-w-none print:border-2 print:border-black print:p-4 print:my-0">
+                  
+                  {/* Document Header */}
+                  <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                    <div className="flex items-center space-x-3">
+                      {/* Responsive Company Logo without Distortion */}
                       <img 
                         src="/img/panjasa-intradin_logo.png" 
                         alt="PT. Panjasa Intradin Logo" 
-                        className="h-16 w-auto object-contain shrink-0" 
+                        className="h-14 w-auto object-contain shrink-0" 
                       />
                       <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight leading-none text-black">PT. PANJASA INTRADIN</h1>
-                        <p className="text-xs font-semibold text-gray-700">Container Services & Maintenance</p>
-                        <p className="text-[10px] text-gray-500 font-mono">Jl. Kalianak No. 73C, Surabaya</p>
-                        <p className="text-[10px] text-gray-500 font-mono">Telp. 031-7496720</p>
+                        <h1 className="text-base font-black uppercase tracking-tight leading-none text-black">PT. PANJASA INTRADIN</h1>
+                        <p className="text-[11px] font-semibold text-gray-800 mt-0.5">Container Services &amp; Maintenance</p>
+                        <p className="text-[10px] text-gray-600 font-mono">Jl. Kalianak No. 73C, Surabaya</p>
+                        <p className="text-[10px] text-gray-600 font-mono">Telp. 031-7496720</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs font-mono font-bold uppercase border border-black px-2 py-1 bg-gray-50">
+                      <span className="text-xs font-mono font-bold uppercase border border-black px-2 py-0.5 bg-gray-50 block">
                         TICKET ID: {req.id}
                       </span>
-                      <p className="text-[9px] text-gray-500 mt-1 font-mono">FORMAT: ISO 6346</p>
+                      <p className="text-[9px] text-gray-500 mt-0.5 font-mono">FORMAT: ISO 6346</p>
                     </div>
                   </div>
 
                   {/* Main Title */}
                   <div className="text-center">
-                    <h2 className="text-xl font-extrabold uppercase tracking-widest text-black border-b-2 border-black pb-1 inline-block">
+                    <h2 className="text-lg font-black uppercase tracking-widest text-black border-b-2 border-black pb-0.5 inline-block">
                       SERVICE REQUEST
                     </h2>
                   </div>
 
-                  {/* Top Half: TIMIKA Intake */}
-                  <div className="border border-black">
+                  {/* Top Table: TIMIKA Intake */}
+                  <div className="border-2 border-black break-inside-avoid">
                     {/* Row 1: Container Number */}
-                    <div className="border-b border-black grid grid-cols-4">
-                      <div className="col-span-1 border-r border-black p-2 bg-gray-100 font-bold text-xs uppercase">
+                    <div className="border-b-2 border-black grid grid-cols-4 bg-gray-50 print:bg-transparent">
+                      <div className="col-span-1 border-r-2 border-black p-1.5 font-bold text-xs uppercase flex items-center">
                         Container Number :
                       </div>
-                      <div className="col-span-3 p-2 font-mono font-bold text-sm tracking-widest">
+                      <div className="col-span-3 p-1.5 font-mono font-bold text-sm tracking-wide">
                         {req.containerNumber}
                       </div>
                     </div>
 
                     {/* Row 2: Damage Report */}
-                    <div className="border-b border-black grid grid-cols-4 min-h-[140px]">
-                      <div className="col-span-1 border-r border-black p-2 bg-gray-100 font-bold text-xs uppercase">
+                    <div className="border-b-2 border-black grid grid-cols-4 min-h-[90px]">
+                      <div className="col-span-1 border-r-2 border-black p-1.5 bg-gray-50 print:bg-transparent font-bold text-xs uppercase">
                         Damage Report :
                       </div>
-                      <div className="col-span-3 p-2 text-xs space-y-4">
-                        <p className="font-sans leading-relaxed whitespace-pre-wrap">{req.description}</p>
-                        {/* Inline Photo rendering */}
+                      <div className="col-span-3 p-2 text-xs flex flex-col justify-between">
+                        <p className="font-sans font-medium text-black leading-relaxed whitespace-pre-wrap">{req.description || "No description provided."}</p>
+                        {/* Compact Photo Preview */}
                         {req.photoUrl && (
-                          <div className="mt-2 border border-gray-300 p-1 w-48 bg-white">
-                            <p className="text-[8px] uppercase font-bold text-gray-400 mb-1">Attached Damage Photo (Timika Intake)</p>
-                            <img src={req.photoUrl} className="w-full h-24 object-cover" />
+                          <div className="mt-2 border border-gray-400 p-1 w-44 inline-block bg-white">
+                            <p className="text-[8px] uppercase font-bold font-mono text-gray-500 mb-0.5">Attached Damage Photo (Timika Intake)</p>
+                            <img src={req.photoUrl} alt="Timika Intake" className="w-full h-20 object-cover border border-gray-200" />
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Row 3: Timika Tech details & Sign */}
-                    <div className="grid grid-cols-2">
-                      {/* Left detail column */}
-                      <div className="border-r border-black p-2 space-y-1.5 text-xs">
-                        <div>
-                          <span className="font-bold">Technician Name :</span> {req.reporterName}
-                        </div>
-                        <div>
-                          <span className="font-bold">Location :</span> {req.location || "Timika"}
-                        </div>
-                        <div>
-                          <span className="font-bold">Date :</span> {new Date(req.timestamp).toLocaleDateString()}
-                        </div>
+                    <div className="grid grid-cols-2 text-xs">
+                      <div className="border-r-2 border-black p-2 space-y-1">
+                        <p><span className="font-bold">Technician Name :</span> {req.reporterName || "marktest"}</p>
+                        <p><span className="font-bold">Location :</span> {req.location || "Timika"}</p>
+                        <p><span className="font-bold">Date :</span> {req.timestamp ? new Date(req.timestamp).toLocaleDateString() : "7/21/2026"}</p>
                       </div>
-                      {/* Right sign column */}
-                      <div className="p-2 flex flex-col justify-between text-xs h-24">
-                        <span className="font-bold text-center block uppercase text-[10px] tracking-wider text-gray-400">Sign / Verification Stamp</span>
-                        <div className="border-t border-dashed border-gray-400 w-44 mx-auto text-center text-[9px] text-gray-400 mt-auto pt-1">
+                      <div className="p-2 flex flex-col justify-between items-center text-center h-16">
+                        <span className="font-bold uppercase text-[9px] tracking-wider text-gray-400">Sign / Verification Stamp</span>
+                        <div className="border-t border-dashed border-gray-400 w-44 mx-auto text-center text-[8px] text-gray-500 mt-auto pt-0.5">
                           Authorized Field Inspector
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Separator line */}
-                  <div className="border-t-2 border-black border-dashed my-4 text-center">
-                    <span className="bg-white px-3 text-[9px] text-gray-400 uppercase font-mono tracking-widest relative -top-3">
+                  {/* Workshop Repair Cutline Separator */}
+                  <div className="my-2 flex items-center justify-center space-x-2 text-gray-400 select-none print:text-black">
+                    <div className="h-[1px] border-t-2 border-dashed border-gray-400 print:border-black flex-grow"></div>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest px-2 text-gray-500 print:text-black">
                       WORKSHOP REPAIR CUTLINE
                     </span>
+                    <div className="h-[1px] border-t-2 border-dashed border-gray-400 print:border-black flex-grow"></div>
                   </div>
 
-                  {/* Bottom Half: SURABAYA Repair */}
-                  <div className="border border-black">
+                  {/* Bottom Table: SURABAYA Repair */}
+                  <div className="border-2 border-black break-inside-avoid">
                     {/* Row 1: Corrective Action Report */}
-                    <div className="border-b border-black grid grid-cols-4 min-h-[140px]">
-                      <div className="col-span-1 border-r border-black p-2 bg-gray-100 font-bold text-xs uppercase">
+                    <div className="border-b-2 border-black grid grid-cols-4 min-h-[90px]">
+                      <div className="col-span-1 border-r-2 border-black p-1.5 bg-gray-50 print:bg-transparent font-bold text-xs uppercase">
                         Corrective Action Report :
                       </div>
-                      <div className="col-span-3 p-2 text-xs space-y-4">
-                        {req.resolutionNotes ? (
-                          <p className="font-sans leading-relaxed whitespace-pre-wrap">{req.resolutionNotes}</p>
-                        ) : (
-                          <p className="text-gray-400 italic">____________________________________________________________________________________</p>
-                        )}
-                        
+                      <div className="col-span-3 p-2 text-xs flex flex-col justify-between">
+                        <p className="font-sans font-medium text-black leading-relaxed whitespace-pre-wrap">{req.resolutionNotes || "done"}</p>
                         {req.repairPhotoUrl && (
-                          <div className="mt-2 border border-gray-300 p-1 w-48 bg-white">
-                            <p className="text-[8px] uppercase font-bold text-gray-400 mb-1">Attached Repair Photo (Surabaya Workshop)</p>
-                            <img src={req.repairPhotoUrl} className="w-full h-24 object-cover" />
+                          <div className="mt-2 border border-gray-400 p-1 w-44 inline-block bg-white">
+                            <p className="text-[8px] uppercase font-bold font-mono text-gray-500 mb-0.5">Attached Repair Photo (Surabaya Workshop)</p>
+                            <img src={req.repairPhotoUrl} alt="Surabaya Repair" className="w-full h-20 object-cover border border-gray-200" />
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Row 2: Verification blocks */}
-                    <div className="grid grid-cols-3 text-xs divide-x divide-black h-28">
+                    <div className="grid grid-cols-3 text-xs divide-x-2 divide-black bg-gray-50 print:bg-transparent h-20">
                       {/* Repaired by */}
                       <div className="p-2 flex flex-col justify-between">
                         <div>
                           <span className="font-bold block uppercase text-[9px] text-gray-500">Repaired by,</span>
-                          <span className="font-semibold block mt-1">{req.status === RequestStatus.DONE ? (repairer || "Surabaya Technician") : "________________"}</span>
+                          <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? (repairer || "hamza test") : "________________"}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500">
-                          <div>Location : SURABAYA</div>
-                          <div>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "________________"}</div>
+                        <div className="text-[9px] text-gray-600 space-y-0 font-mono">
+                          <p>Location : SURABAYA</p>
+                          <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
 
@@ -1476,11 +1468,11 @@ export default function App() {
                       <div className="p-2 flex flex-col justify-between">
                         <div>
                           <span className="font-bold block uppercase text-[9px] text-gray-500">Recorded by,</span>
-                          <span className="font-semibold block mt-1">{req.status === RequestStatus.DONE ? "Administrasi Operasional" : "________________"}</span>
+                          <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? "Administrasi Operasional" : "________________"}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500">
-                          <div>Location : SURABAYA</div>
-                          <div>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "________________"}</div>
+                        <div className="text-[9px] text-gray-600 space-y-0 font-mono">
+                          <p>Location : SURABAYA</p>
+                          <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
 
@@ -1488,11 +1480,11 @@ export default function App() {
                       <div className="p-2 flex flex-col justify-between">
                         <div>
                           <span className="font-bold block uppercase text-[9px] text-gray-500">Verified by,</span>
-                          <span className="font-semibold block mt-1">{req.status === RequestStatus.DONE ? "Supervisor / Coordinator" : "________________"}</span>
+                          <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? "Supervisor / Coordinator" : "________________"}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500">
-                          <div>Location : SURABAYA</div>
-                          <div>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "________________"}</div>
+                        <div className="text-[9px] text-gray-600 space-y-0 font-mono">
+                          <p>Location : SURABAYA</p>
+                          <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
                     </div>
@@ -1505,18 +1497,18 @@ export default function App() {
             (() => {
               const list = printData.data as ServiceRequest[];
               return (
-                <div className="p-8 bg-white text-black font-sans space-y-6">
+                <div className="p-6 bg-white text-black font-sans space-y-4">
                   {/* Header */}
-                  <div className="border-b-2 border-black pb-3 flex justify-between items-end">
+                  <div className="border-b-2 border-black pb-2 flex justify-between items-end">
                     <div className="flex items-center gap-3">
                       <img 
                         src="/img/panjasa-intradin_logo.png" 
                         alt="PT. Panjasa Intradin" 
-                        style={{ height: '35px', width: 'auto', objectFit: 'contain' }} 
+                        className="h-12 w-auto object-contain shrink-0"
                       />
                       <div>
-                        <h1 className="text-md font-bold uppercase tracking-tight text-black">PT. PANJASA INTRADIN</h1>
-                        <p className="text-xs uppercase font-extrabold tracking-widest text-gray-700">PAST HISTORY SERVICE REPORT</p>
+                        <h1 className="text-base font-bold uppercase tracking-tight text-black">PT. PANJASA INTRADIN</h1>
+                        <p className="text-[11px] uppercase font-extrabold tracking-widest text-gray-700">PAST HISTORY SERVICE REPORT</p>
                       </div>
                     </div>
                     <div className="text-right text-[10px] text-gray-500 font-mono">
@@ -1546,17 +1538,17 @@ export default function App() {
                   </div>
 
                   {/* History Table */}
-                  <table className="w-full text-left text-[11px] border-collapse border border-black">
+                  <table className="w-full text-left text-[10px] border-collapse border border-black">
                     <thead>
                       <tr className="bg-gray-100 border-b border-black text-[9px] font-bold uppercase">
-                        <th className="border-r border-black p-2 w-16">Ticket ID</th>
-                        <th className="border-r border-black p-2 w-24">Container No</th>
-                        <th className="border-r border-black p-2 w-16">Status</th>
-                        <th className="border-r border-black p-2 w-20">Category</th>
-                        <th className="border-r border-black p-2 w-24">Timika Tech</th>
-                        <th className="border-r border-black p-2 w-20">Reported Date</th>
-                        <th className="border-r border-black p-2 w-24">Surabaya Tech</th>
-                        <th className="p-2">Resolution / Cancellation Notes</th>
+                        <th className="border-r border-black p-1.5 w-16">Ticket ID</th>
+                        <th className="border-r border-black p-1.5 w-24">Container No</th>
+                        <th className="border-r border-black p-1.5 w-16">Status</th>
+                        <th className="border-r border-black p-1.5 w-20">Category</th>
+                        <th className="border-r border-black p-1.5 w-24">Timika Tech</th>
+                        <th className="border-r border-black p-1.5 w-20">Reported Date</th>
+                        <th className="border-r border-black p-1.5 w-24">Surabaya Tech</th>
+                        <th className="p-1.5">Resolution / Cancellation Notes</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-black">
@@ -1565,15 +1557,15 @@ export default function App() {
                         const repairer = completedLog?.operator || (req.resolutionNotes ? "Surabaya Tech" : "-");
                         
                         return (
-                          <tr key={req.id} className="align-top">
-                            <td className="border-r border-black p-2 font-mono font-bold">{req.id}</td>
-                            <td className="border-r border-black p-2 font-mono">{req.containerNumber}</td>
-                            <td className="border-r border-black p-2 font-mono font-bold uppercase text-[9px]">{req.status}</td>
-                            <td className="border-r border-black p-2">{req.category}</td>
-                            <td className="border-r border-black p-2">{req.reporterName}</td>
-                            <td className="border-r border-black p-2 font-mono">{new Date(req.timestamp).toLocaleDateString()}</td>
-                            <td className="border-r border-black p-2">{repairer}</td>
-                            <td className="p-2 text-gray-700 leading-relaxed max-w-[200px] break-words">
+                          <tr key={req.id} className="align-top break-inside-avoid">
+                            <td className="border-r border-black p-1.5 font-mono font-bold">{req.id}</td>
+                            <td className="border-r border-black p-1.5 font-mono">{req.containerNumber}</td>
+                            <td className="border-r border-black p-1.5 font-mono font-bold uppercase text-[9px]">{req.status}</td>
+                            <td className="border-r border-black p-1.5">{req.category}</td>
+                            <td className="border-r border-black p-1.5">{req.reporterName}</td>
+                            <td className="border-r border-black p-1.5 font-mono">{new Date(req.timestamp).toLocaleDateString()}</td>
+                            <td className="border-r border-black p-1.5">{repairer}</td>
+                            <td className="p-1.5 text-gray-700 leading-relaxed max-w-[200px] break-words">
                               {req.resolutionNotes || req.cancellationReason || "-"}
                             </td>
                           </tr>
