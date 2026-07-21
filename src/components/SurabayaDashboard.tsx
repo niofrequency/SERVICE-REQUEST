@@ -583,7 +583,7 @@ export default function SurabayaDashboard({
                               </button>
                             </div>
 
-                            {/* Edit & Delete Action Buttons: STRICTLY LOCKED FOR COMPLETED/CANCELLED */}
+                            {/* Edit & Delete Action Buttons: LOCKED FOR COMPLETED/CANCELLED, BUT WITH ADMIN DELETE OVERRIDE */}
                             {isAuthorized && (
                               <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
                                 {!locked ? (
@@ -604,9 +604,20 @@ export default function SurabayaDashboard({
                                     </button>
                                   </>
                                 ) : (
-                                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
-                                    <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked (No Edits Allowed)" : "Terkunci (Tidak Dapat Diubah)"}
-                                  </span>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
+                                      <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked" : "Terkunci"}
+                                    </span>
+                                    {isAdmin && (
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => handleDelete(e, req.id)}
+                                        className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="h-3 w-3" /> Admin Delete
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             )}
