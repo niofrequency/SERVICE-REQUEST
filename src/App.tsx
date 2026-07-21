@@ -1333,8 +1333,8 @@ export default function App() {
       )}
 
       {/* Absolute, print-only hidden area */}
-      {printData && (
-        <div id="printable-area" className="hidden print:block">
+     {printData && (
+        <div id="printable-area" className="hidden print:block print:h-auto print:overflow-visible">
           {printData.type === "unit" ? (
             // Individual PT PANJASA INTRADIN "SERVICE REQUEST" form
             (() => {
