@@ -11,7 +11,6 @@ import {
 import { 
   Camera, 
   AlertTriangle, 
-  Cpu, 
   CheckCircle, 
   User, 
   ClipboardList, 
@@ -95,7 +94,7 @@ export default function TimikaForm({
   const [editCategory, setEditCategory] = useState<IssueCategory>(IssueCategory.STRUCTURAL);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Prefill from external AI Scanner
+  // Prefill from external inputs or mobile camera
   useEffect(() => {
     if (prefilledContainerNumber) {
       setContainerNumber(formatContainerNumber(prefilledContainerNumber));
@@ -120,11 +119,8 @@ export default function TimikaForm({
   }, [loggedInUser]);
 
   // UI Flow State
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanMethod, setScanMethod] = useState<"preset" | "upload" | "none">("none");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,58 +169,15 @@ export default function TimikaForm({
     }
   };
 
-  // Run the actual backend OCR API
-  const runOcrScanner = async (imageDataUrl: string) => {
-    setIsScanning(true);
-    setScanProgress(10);
-
-    const interval = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
-        }
-        return prev + 15;
-      });
-    }, 150);
-
-    try {
-      const response = await fetch("/api/ocr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageDataUrl }),
-      });
-
-      clearInterval(interval);
-      setScanProgress(100);
-
-      const data = await response.json();
-      if (response.ok) {
-        setContainerNumber(formatContainerNumber(data.containerNumber || ""));
-      } else {
-        console.error("OCR API error:", data.error);
-      }
-    } catch (err) {
-      console.error("OCR execution failed:", err);
-    } finally {
-      setTimeout(() => {
-        setIsScanning(false);
-        setScanProgress(0);
-      }, 500);
-    }
-  };
-
-  // Handle manual file upload and triggers real OCR
+  // Direct manual file upload (No AI OCR Processing)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setScanMethod("upload");
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
       setPhoto(base64);
-      runOcrScanner(base64);
     };
     reader.readAsDataURL(file);
   };
@@ -235,7 +188,7 @@ export default function TimikaForm({
     setSubmitError(null);
 
     if (!containerNumber.trim()) {
-      setSubmitError("Container Number is required. Try the OCR scan above!");
+      setSubmitError("Container Number is required. Please type the container plate above.");
       return;
     }
 
@@ -264,7 +217,6 @@ export default function TimikaForm({
         setContainerNumber("");
         setDescription("");
         setPhoto(null);
-        setScanMethod("none");
         if (onClearPrefilled) onClearPrefilled();
         onSubmitSuccess();
       } else {
@@ -286,7 +238,6 @@ export default function TimikaForm({
           setContainerNumber("");
           setDescription("");
           setPhoto(null);
-          setScanMethod("none");
           if (onClearPrefilled) onClearPrefilled();
           onSubmitSuccess();
         } else {
@@ -301,10 +252,9 @@ export default function TimikaForm({
   };
 
   return (
-    // Replaced grid with Container-Responsive Flex Wrap
     <div className="flex flex-wrap gap-6 animate-fade-in w-full">
 
-      {/* Form & AI Scanner Column (flex-[1_1_450px] forces it to stack if container is < 750px wide) */}
+      {/* Form & Photo Attachment Column */}
       <div className="flex-[1_1_450px] min-w-[280px] bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full">
         {!isAuthorized && (
           <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
@@ -337,12 +287,12 @@ export default function TimikaForm({
           </p>
         </div>
 
-        {/* AI OCR Scanner Section */}
+        {/* Direct Photo Attachment Section */}
         <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/40 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-bold text-slate-500 flex items-center space-x-1.5 uppercase tracking-wide">
-              <Cpu className="h-4 w-4 text-slate-600" />
-              <span>{t.geminiOcrTitle}</span>
+              <ImageIcon className="h-4 w-4 text-slate-600" />
+              <span>{language === "ENG" ? "Damage Photo Attachment" : "Lampiran Foto Kerusakan"}</span>
             </span>
           </div>
 
@@ -356,23 +306,10 @@ export default function TimikaForm({
                     referrerPolicy="no-referrer"
                     className="w-full h-40 object-cover rounded-lg border border-slate-200"
                   />
-                  {isScanning && (
-                    <div className="absolute inset-0 bg-slate-950/80 rounded-lg flex flex-col items-center justify-center space-y-3">
-                      <div className="relative w-10 h-10">
-                        <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
-                        <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
-                      </div>
-                      <span className="text-[11px] font-mono font-semibold text-blue-400 animate-pulse uppercase tracking-widest">
-                        Scanning Plate ({scanProgress}%)
-                      </span>
-                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/80 shadow-[0_0_10px_#3b82f6] animate-bounce" />
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={() => {
                       setPhoto(null);
-                      setContainerNumber("");
                       if (onClearPrefilled) onClearPrefilled();
                     }}
                     disabled={!isAuthorized}
@@ -420,8 +357,8 @@ export default function TimikaForm({
               <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5 flex items-center justify-between">
                 <span>{t.containerIdLabel} *</span>
                 {prefilledContainerNumber && (
-                  <span className="text-[8px] font-black tracking-widest text-amber-600 uppercase bg-amber-500/10 px-1.5 py-0.5 rounded animate-pulse">
-                    ✨ {language === "ENG" ? "Auto-filled" : "Terisi Otomatis"}
+                  <span className="text-[8px] font-black tracking-widest text-blue-600 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded">
+                    {language === "ENG" ? "Prefilled" : "Terisi"}
                   </span>
                 )}
               </label>
@@ -435,11 +372,7 @@ export default function TimikaForm({
                   onChange={(e) => {
                     setContainerNumber(formatContainerNumber(e.target.value));
                   }}
-                  className={`w-full bg-blue-50/30 border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all ${
-                    prefilledContainerNumber 
-                      ? "border-amber-500 ring-2 ring-amber-500/20" 
-                      : "border-slate-200"
-                  }`}
+                  className="w-full bg-blue-50/30 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
                   required
                 />
                 {containerNumber && (
@@ -492,7 +425,7 @@ export default function TimikaForm({
           <button
             id="btn-submit-request"
             type="submit"
-            disabled={isSubmitting || isScanning || !isAuthorized}
+            disabled={isSubmitting || !isAuthorized}
             className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-xs shadow-md shadow-blue-500/10 transition-all uppercase tracking-widest flex items-center justify-center space-x-2 cursor-pointer text-center"
           >
             {isSubmitting ? (
@@ -543,7 +476,6 @@ export default function TimikaForm({
                 [RequestStatus.CANCELLED]: "bg-rose-50 text-rose-700 border-rose-200/60",
               };
 
-              // Map localized terms for card display
               let displayPrio = req.priority;
               if (req.priority === PriorityLevel.LOW) displayPrio = t.prioLow as PriorityLevel;
               else if (req.priority === PriorityLevel.MEDIUM) displayPrio = t.prioMedium as PriorityLevel;
@@ -562,7 +494,7 @@ export default function TimikaForm({
                   onClick={() => {
                     if (editingId !== req.id) onSelectRequest(req);
                   }}
-                  className="bg-white p-4 rounded-xl border border-slate-200/70 hover:border-blue-400 transition-all cursor-pointer shadow-sm relative group space-y-2 hover:-translate-y-0.5"
+                  className="bg-white p-4 rounded-xl border border-slate-200/70 hover:border-blue-400 transition-all cursor-pointer shadow-sm relative group space-y-2 hover:-translate-y-0.5 break-inside-avoid"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-mono text-xs font-bold text-slate-950 group-hover:text-blue-600 transition-colors">
@@ -573,7 +505,6 @@ export default function TimikaForm({
                     </span>
                   </div>
 
-                  {/* Inline Edit Mode vs Normal View Mode */}
                   {editingId === req.id ? (
                     <div className="space-y-3 pt-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">
@@ -647,7 +578,6 @@ export default function TimikaForm({
                         </div>
                       </div>
 
-                      {/* Action Buttons: Visible only if user is authorized TIMIKA or ADMIN */}
                       {isAuthorized && (
                         <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100/80 mt-1" onClick={(e) => e.stopPropagation()}>
                           <button 
@@ -669,7 +599,6 @@ export default function TimikaForm({
                     </>
                   )}
 
-                  {/* Complete repair status banner */}
                   {req.status === RequestStatus.DONE && (
                     <div className="mt-2 bg-emerald-50/50 border border-emerald-100/60 rounded-lg p-2 flex items-start gap-2 animate-fade-in text-[11px] leading-relaxed">
                       <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -680,7 +609,6 @@ export default function TimikaForm({
                     </div>
                   )}
 
-                  {/* Cancelled request status banner */}
                   {req.status === RequestStatus.CANCELLED && (
                     <div className="mt-2 bg-rose-50/50 border border-rose-100/60 rounded-lg p-2 flex items-start gap-2 animate-fade-in text-[11px] leading-relaxed">
                       <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
