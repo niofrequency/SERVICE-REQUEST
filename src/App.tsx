@@ -1333,8 +1333,8 @@ export default function App() {
       )}
 
       {/* Absolute, print-only hidden area */}
-     {printData && (
-        <div id="printable-area" className="hidden print:block print:h-auto print:overflow-visible">
+      {printData && (
+        <div id="printable-area" className="hidden print:block print:h-auto print:overflow-visible print:p-0 print:m-0">
           {printData.type === "unit" ? (
             // Individual PT PANJASA INTRADIN "SERVICE REQUEST" form
             (() => {
@@ -1347,15 +1347,12 @@ export default function App() {
                   {/* Header banner */}
                   <div className="flex items-center justify-between border-b-2 border-black pb-4">
                     <div className="flex items-center space-x-4">
-                      {/* SVG Clover logo */}
-                      <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0">
-                        <path d="M 50,45 C 35,45 35,25 50,25 C 65,25 65,45 50,45 Z" fill="none" stroke="#16a34a" strokeWidth="5" />
-                        <path d="M 45,50 C 45,35 25,35 25,50 C 25,65 45,65 45,50 Z" fill="none" stroke="#16a34a" strokeWidth="5" />
-                        <path d="M 55,50 C 55,35 75,35 75,50 C 75,65 55,65 55,50 Z" fill="none" stroke="#16a34a" strokeWidth="5" />
-                        <rect x="43" y="58" width="4" height="22" fill="#dc2626" />
-                        <rect x="48" y="55" width="4" height="25" fill="#dc2626" />
-                        <rect x="53" y="58" width="4" height="22" fill="#dc2626" />
-                      </svg>
+                      {/* Official Company Logo */}
+                      <img 
+                        src="/img/panjasa-intradin_logo.png" 
+                        alt="PT. Panjasa Intradin Logo" 
+                        className="h-16 w-auto object-contain shrink-0" 
+                      />
                       <div>
                         <h1 className="text-lg font-black uppercase tracking-tight leading-none text-black">PT. PANJASA INTRADIN</h1>
                         <p className="text-xs font-semibold text-gray-700">Container Services & Maintenance</p>
@@ -1504,7 +1501,7 @@ export default function App() {
               );
             })()
           ) : (
-// Printable History Report
+            // Printable History Report
             (() => {
               const list = printData.data as ServiceRequest[];
               return (
