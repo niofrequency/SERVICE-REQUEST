@@ -8,6 +8,25 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
+// Firebase Admin SDK initialization
+import * as admin from "firebase-admin";
+
+// Initialize Firebase Admin (uses GOOGLE_APPLICATION_CREDENTIALS env var or falls back to embedded config)
+let db: any = null;
+
+try {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID || "service-request-2e06e",
+    });
+  }
+  db = admin.firestore();
+  console.log("✓ Firebase Admin SDK initialized - Firestore connected");
+} catch (err: any) {
+  console.warn("⚠ Firebase Admin initialization warning:", err.message);
+  console.warn("Falling back to file-based persistence. Set GOOGLE_APPLICATION_CREDENTIALS for cloud sync.");
+}
+
 import { 
   ServiceRequest, 
   RequestStatus, 
@@ -39,7 +58,7 @@ if (process.env.GEMINI_API_KEY) {
   console.warn("WARNING: GEMINI_API_KEY environment variable is not set. AI OCR features will run in mock mode.");
 }
 
-// Persistence setup
+// Persistence setup (fallback for when Firestore is unavailable)
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "requests.json");
 
@@ -153,7 +172,7 @@ const INITIAL_MOCK_REQUESTS: ServiceRequest[] = [
   }
 ];
 
-function loadRequests(): ServiceRequest[] {
+function loadRequestsSync(): ServiceRequest[] {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -163,11 +182,9 @@ function loadRequests(): ServiceRequest[] {
       const data = fs.readFileSync(DATA_FILE, "utf-8");
       loaded = JSON.parse(data);
     } else {
-      // Seed initial data
       fs.writeFileSync(DATA_FILE, JSON.stringify(INITIAL_MOCK_REQUESTS, null, 2), "utf-8");
       loaded = INITIAL_MOCK_REQUESTS;
     }
-    // Normalize container numbers to use dashes for both new and existing data
     return loaded.map((req) => ({
       ...req,
       containerNumber: req.containerNumber.toUpperCase().trim().replace(/[\s-]+/g, "-"),
@@ -178,7 +195,7 @@ function loadRequests(): ServiceRequest[] {
   }
 }
 
-function saveRequests(data: ServiceRequest[]): void {
+function saveRequestsSync(data: ServiceRequest[]): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -189,18 +206,41 @@ function saveRequests(data: ServiceRequest[]): void {
   }
 }
 
-// Load current list
-let requests: ServiceRequest[] = loadRequests();
+// Initialize in-memory cache
+let requestsCache: ServiceRequest[] = loadRequestsSync();
+
+// Sync cache to Firestore on startup (if Firestore is available)
+async function syncCacheToFirestore() {
+  if (!db) {
+    console.log("Firestore not available - using local file storage only");
+    return;
+  }
+
+  try {
+    console.log("Syncing local cache to Firestore...");
+    const batch = db.batch();
+    
+    for (const req of requestsCache) {
+      const docRef = db.collection("requests").doc(req.id);
+      batch.set(docRef, req, { merge: true });
+    }
+    
+    await batch.commit();
+    console.log("✓ Sync complete: " + requestsCache.length + " requests pushed to Firestore");
+  } catch (err: any) {
+    console.warn("⚠ Firestore sync warning:", err.message);
+  }
+}
 
 // --- API Routes ---
 
-// Get all requests
+// Get all requests (from cache, synced from Firestore)
 app.get("/api/requests", (req, res) => {
-  res.json(requests);
+  res.json(requestsCache);
 });
 
 // Create a service request (submitted from Timika)
-app.post("/api/requests", (req, res) => {
+app.post("/api/requests", async (req, res) => {
   try {
     const { containerNumber, priority, category, description, photoUrl, reporterName } = req.body;
 
@@ -208,7 +248,14 @@ app.post("/api/requests", (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const newId = `REQ-2026-${String(requests.length + 1).padStart(3, "0")}`;
+    const numericIds = requestsCache
+      .map((r) => {
+        const match = r.id.match(/REQ-2026-(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((val) => !isNaN(val));
+    const nextNum = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const newId = `REQ-2026-${String(nextNum).padStart(3, "0")}`;
     const timestamp = new Date().toISOString();
 
     const newRequest: ServiceRequest = {
@@ -237,8 +284,18 @@ app.post("/api/requests", (req, res) => {
       ]
     };
 
-    requests.unshift(newRequest); // Add new items first
-    saveRequests(requests);
+    // 1. Update cache
+    requestsCache.unshift(newRequest);
+    
+    // 2. Save to local file (backup)
+    saveRequestsSync(requestsCache);
+
+    // 3. Write to Firestore (async, non-blocking)
+    if (db) {
+      db.collection("requests").doc(newId).set(newRequest).catch((err: any) => {
+        console.warn("Firestore write warning for " + newId + ":", err.message);
+      });
+    }
 
     res.status(201).json(newRequest);
   } catch (err: any) {
@@ -247,7 +304,7 @@ app.post("/api/requests", (req, res) => {
 });
 
 // Update status (transitioned by Surabaya or Timika depending on action)
-app.post("/api/requests/:id/status", (req, res) => {
+app.post("/api/requests/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
     const { status, operator, location, notes, repairPhotoUrl, resolutionNotes, cancellationReason } = req.body;
@@ -256,12 +313,12 @@ app.post("/api/requests/:id/status", (req, res) => {
       return res.status(400).json({ error: "Missing status, operator or location in request body" });
     }
 
-    const requestIndex = requests.findIndex((r) => r.id === id);
+    const requestIndex = requestsCache.findIndex((r) => r.id === id);
     if (requestIndex === -1) {
       return res.status(404).json({ error: "Request not found" });
     }
 
-    const request = requests[requestIndex];
+    const request = requestsCache[requestIndex];
     const oldStatus = request.status;
     const timestamp = new Date().toISOString();
 
@@ -309,8 +366,17 @@ app.post("/api/requests/:id/status", (req, res) => {
     };
 
     request.auditLogs.push(auditLog);
-    requests[requestIndex] = request;
-    saveRequests(requests);
+    requestsCache[requestIndex] = request;
+
+    // 1. Save to local file (backup)
+    saveRequestsSync(requestsCache);
+
+    // 2. Write to Firestore (async, non-blocking)
+    if (db) {
+      db.collection("requests").doc(id).set(request).catch((err: any) => {
+        console.warn("Firestore update warning for " + id + ":", err.message);
+      });
+    }
 
     res.json(request);
   } catch (err: any) {
@@ -321,21 +387,19 @@ app.post("/api/requests/:id/status", (req, res) => {
 // AI OCR container number extraction using Gemini 3.5 Flash Multimodal Vision
 app.post("/api/ocr", async (req, res) => {
   try {
-    const { image } = req.body; // Expects base64 string or Data URL
+    const { image } = req.body;
     if (!image) {
       return res.status(400).json({ error: "Image data is required" });
     }
 
-    // Handle dummy/mock fallback if key is not set or if standard image is requested
+    // Handle dummy/mock fallback if key is not set
     if (!ai) {
       console.log("No Gemini API key configured, falling back to mock OCR.");
-      // Just mock a standard container number based on random chance
       const codes = ["MSKU 928310 4", "TGBU 821345 9", "HLXU 198273 1", "SUDU 382910 2", "HDMU 749201 0"];
       const randomCode = codes[Math.floor(Math.random() * codes.length)];
       return res.json({ containerNumber: randomCode, mock: true });
     }
 
-    // Process image base64
     let base64Data = image;
     let mimeType = "image/jpeg";
     if (image.startsWith("data:")) {
@@ -355,7 +419,7 @@ app.post("/api/ocr", async (req, res) => {
 
     const textPart = {
       text: `Identify the ISO 6346 Shipping Container Number printed on this container. 
-A standard container number has 4 letters (owner code + category identifier, e.g., 'FUKU', 'MSKU', 'TGBU') followed by a hyphen, then 6 digits, and finally 1 check digit (e.g. FUKU-610012-2, MSKU-491028-3, TGBU-821345-9).
+A standard container number has 4 letters (owner code + category identifier, e.g., 'FUKU', 'MSKU', 'TGBU') followed by a hyphen, then 6 digits, and finally 1 check digit (e.g. FUKU-610012-2, MSKU[...]
 
 Look carefully at the image for vertical or horizontal text printed on the doors or sides. 
 Respond with ONLY the exact, standardized container number formatted with hyphens/dashes (e.g., 'FUKU-610012-2'). 
@@ -380,6 +444,9 @@ Do not include any other text, markdown, or explanation.`,
 
 // Start server and handle production vs dev assets
 async function startServer() {
+  // Sync to Firestore on startup
+  await syncCacheToFirestore();
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
