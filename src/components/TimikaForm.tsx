@@ -40,6 +40,7 @@ interface TimikaFormProps {
   prefilledContainerNumber?: string;
   prefilledPhoto?: string | null;
   onClearPrefilled?: () => void;
+  onNavigateHistory?: () => void; // Added for the clickable history card
 }
 
 // Helper to automatically format container number to ISO 6346 with hyphens (e.g. CBHU-265392-1)
@@ -77,6 +78,7 @@ export default function TimikaForm({
   prefilledContainerNumber,
   prefilledPhoto,
   onClearPrefilled,
+  onNavigateHistory,
 }: TimikaFormProps) {
   const t = locales[language];
 
@@ -387,7 +389,7 @@ export default function TimikaForm({
               </div>
             </div>
 
-            {/* ACTION CONTROLS: Locked if sent/in-progress/done */}
+            {/* ACTION CONTROLS: Locked if sent/in-progress/done. Admin override for Delete added. */}
             {isAuthorized && (
               <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100/80 mt-1" onClick={(e) => e.stopPropagation()}>
                 {!locked ? (
@@ -408,9 +410,20 @@ export default function TimikaForm({
                     </button>
                   </>
                 ) : (
-                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
-                    <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked (Sent to Surabaya)" : "Terkunci (Dikirim ke Surabaya)"}
-                  </span>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
+                      <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked (Sent to Surabaya)" : "Terkunci (Dikirim ke Surabaya)"}
+                    </span>
+                    {isAdmin && (
+                      <button 
+                        type="button"
+                        onClick={(e) => handleDelete(e, req.id)}
+                        className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3" /> Admin Delete
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -629,7 +642,7 @@ export default function TimikaForm({
         </form>
       </div>
 
-      {/* Timika Sent Tracker Column (Separated into In Progress & Completed) */}
+      {/* Timika Sent Tracker Column (Active List + Clickable Summary Card for Completed) */}
       <div className="flex-[1_1_300px] min-w-[280px] space-y-6 max-w-full">
         
         {/* SECTION A: IN PROGRESS & WAITING LOGS */}
@@ -664,36 +677,29 @@ export default function TimikaForm({
           </div>
         </div>
 
-        {/* SECTION B: COMPLETED & CANCELLED LOGS */}
-        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/50 shadow-sm flex flex-col max-h-[500px]">
-          <div className="mb-4 flex items-center justify-between border-b border-slate-200/60 pb-3">
+        {/* SECTION B: COMPLETED & ARCHIVED SUMMARY CARD (Clickable to History Page) */}
+        <div 
+          onClick={() => {
+            if (onNavigateHistory) onNavigateHistory();
+          }}
+          className="bg-white p-5 rounded-2xl border border-slate-200/60 hover:border-blue-400 shadow-sm flex items-center justify-between cursor-pointer transition-all group hover:-translate-y-0.5"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-105 transition-transform">
+              <CheckCircle className="h-5 w-5" />
+            </div>
             <div>
-              <div className="flex items-center space-x-2 text-slate-800 mb-1">
-                <div className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
-                  <CheckCircle className="h-4 w-4" />
-                </div>
-                <h3 className="text-xs font-extrabold uppercase tracking-wider">
-                  {language === "ENG" ? "Completed & Archived" : "Selesai & Arsip"}
-                </h3>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                {language === "ENG" ? "Resolved or cancelled logs" : "Catatan yang telah selesai atau dibatalkan"}
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 group-hover:text-blue-600 transition-colors">
+                {language === "ENG" ? "Completed & Archived Logs" : "Arsip Selesai & Dibatalkan"}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {language === "ENG" ? "Click to view full history ledger" : "Klik untuk melihat buku besar riwayat"}
               </p>
             </div>
-            <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold">
-              {completedRequests.length}
-            </span>
           </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-            {completedRequests.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 font-mono text-[11px] uppercase tracking-wider">
-                {language === "ENG" ? "No completed requests yet" : "Belum ada permintaan selesai"}
-              </div>
-            ) : (
-              completedRequests.map((req) => renderRequestCard(req))
-            )}
-          </div>
+          <span className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold font-mono shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            {completedRequests.length}
+          </span>
         </div>
 
       </div>
