@@ -20,7 +20,8 @@ import {
   History,
   LayoutDashboard,
   Filter,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import { locales } from "./locales.js";
 
@@ -1473,7 +1474,7 @@ export default function App() {
                                 </td>
                                 <td className="py-3.5 px-4 font-medium text-slate-700">
                                   {req.category}
-                                 </td>
+                                </td>
                                 <td className="py-3.5 px-4 text-slate-600 max-w-md">
                                   <div className="line-clamp-1 font-medium text-slate-900">{req.description}</div>
                                   <div className="line-clamp-1 text-[11px] text-slate-400 mt-0.5">
@@ -1499,6 +1500,19 @@ export default function App() {
                                       >
                                         <Printer className="h-3 w-3" />
                                         <span>Print</span>
+                                      </button>
+                                    )}
+                                    {loggedInUser?.email === "mpigome44@gmail.com" && (
+                                      <button
+                                        onClick={() => {
+                                          if (window.confirm(language === "ENG" ? "Are you sure you want to delete this historical record?" : "Apakah Anda yakin ingin menghapus arsip ini?")) {
+                                            handleDeleteRequest(req.id);
+                                          }
+                                        }}
+                                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                        <span>Delete</span>
                                       </button>
                                     )}
                                   </div>
