@@ -1504,16 +1504,23 @@ export default function App() {
               );
             })()
           ) : (
-            // Printable History Report
+// Printable History Report
             (() => {
               const list = printData.data as ServiceRequest[];
               return (
                 <div className="p-8 bg-white text-black font-sans space-y-6">
                   {/* Header */}
                   <div className="border-b-2 border-black pb-3 flex justify-between items-end">
-                    <div>
-                      <h1 className="text-md font-bold uppercase tracking-tight text-black">PT. PANJASA INTRADIN</h1>
-                      <p className="text-xs uppercase font-extrabold tracking-widest text-gray-700">PAST HISTORY SERVICE REPORT</p>
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src="/img/panjasa-intradin_logo.png" 
+                        alt="PT. Panjasa Intradin" 
+                        style={{ height: '35px', width: 'auto', objectFit: 'contain' }} 
+                      />
+                      <div>
+                        <h1 className="text-md font-bold uppercase tracking-tight text-black">PT. PANJASA INTRADIN</h1>
+                        <p className="text-xs uppercase font-extrabold tracking-widest text-gray-700">PAST HISTORY SERVICE REPORT</p>
+                      </div>
                     </div>
                     <div className="text-right text-[10px] text-gray-500 font-mono">
                       <div>REPORT GENERATED: {new Date().toLocaleString()}</div>
