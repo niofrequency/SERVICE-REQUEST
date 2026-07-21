@@ -23,7 +23,8 @@ import {
   Trash2,
   X,
   Save,
-  Printer
+  Printer,
+  Lock
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -84,6 +85,11 @@ export default function SurabayaDashboard({
   // Auth check: user in TIMIKA cannot edit data for SURABAYA and vice versa (Admin is always authorized)
   const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
   const isAuthorized = loggedInUser?.location === LocationTeam.SURABAYA || isAdmin;
+
+  // Helper to check if a log is locked from modification (Completed or Cancelled)
+  const isLogLocked = (status: RequestStatus) => {
+    return status === RequestStatus.DONE || status === RequestStatus.CANCELLED;
+  };
 
   // Auto assign logged-in user name to operator
   useEffect(() => {
@@ -366,13 +372,17 @@ export default function SurabayaDashboard({
                   </div>
                 ) : (
                   colRequests.map((req) => {
+                    const locked = isLogLocked(req.status);
+
                     return (
                       <div
                         key={req.id}
                         onClick={() => {
                           if (editingId !== req.id) onSelectRequest(req);
                         }}
-                        className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-400 hover:shadow-md transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer max-w-full"
+                        className={`bg-white rounded-xl border transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer max-w-full ${
+                          locked ? "border-slate-200/50 bg-slate-50/40 opacity-90" : "border-slate-200/80 hover:border-blue-400 hover:shadow-md"
+                        }`}
                       >
                         {/* Header Details */}
                         <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono">
@@ -557,7 +567,7 @@ export default function SurabayaDashboard({
                               </div>
                             )}
 
-                            {/* Audit Details link & Action Buttons */}
+                            {/* Audit Details link */}
                             <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2 font-mono gap-2">
                               <span className="truncate max-w-[100px]">By: {req.reporterName}</span>
                               <button 
@@ -573,23 +583,31 @@ export default function SurabayaDashboard({
                               </button>
                             </div>
 
-                            {/* Edit & Delete Action Buttons for Surabaya / Admin */}
+                            {/* Edit & Delete Action Buttons: STRICTLY LOCKED FOR COMPLETED/CANCELLED */}
                             {isAuthorized && (
                               <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
-                                <button 
-                                  type="button"
-                                  onClick={(e) => startEdit(e, req)}
-                                  className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-blue-50 transition-colors"
-                                >
-                                  <Edit2 className="h-3 w-3" /> Edit
-                                </button>
-                                <button 
-                                  type="button"
-                                  onClick={(e) => handleDelete(e, req.id)}
-                                  className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors"
-                                >
-                                  <Trash2 className="h-3 w-3" /> Delete
-                                </button>
+                                {!locked ? (
+                                  <>
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => startEdit(e, req)}
+                                      className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-blue-50 transition-colors"
+                                    >
+                                      <Edit2 className="h-3 w-3" /> Edit
+                                    </button>
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => handleDelete(e, req.id)}
+                                      className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors"
+                                    >
+                                      <Trash2 className="h-3 w-3" /> Delete
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
+                                    <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked (No Edits Allowed)" : "Terkunci (Tidak Dapat Diubah)"}
+                                  </span>
+                                )}
                               </div>
                             )}
                           </>
