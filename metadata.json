@@ -1,0 +1,6 @@
+{
+  "name": "Service Request Tracker",
+  "description": "Real-time Service Request Tracker connecting Timika field technicians and Surabaya workshop repair technicians for PT. PANJASA-INTRADIN, with AI OCR container scanning.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,126 @@
+{
+  "entities": {
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "An immutable audit log tracking state transitions of a service request.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID of the audit log entry."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Referenced ServiceRequest ID."
+        },
+        "fromStatus": {
+          "type": "string",
+          "enum": ["NONE", "WAITING", "IN_PROGRESS", "DONE", "CANCELLED"]
+        },
+        "toStatus": {
+          "type": "string",
+          "enum": ["WAITING", "IN_PROGRESS", "DONE", "CANCELLED"]
+        },
+        "operator": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string",
+          "enum": ["Timika", "Surabaya"]
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "requestId", "fromStatus", "toStatus", "operator", "location", "timestamp"]
+    },
+    "ServiceRequest": {
+      "title": "ServiceRequest",
+      "description": "A shipping container damage report and its resolution tracking details.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "containerNumber": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"]
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Electrical", "Structural", "Refrigeration/Telematics", "Mechanical"]
+        },
+        "description": {
+          "type": "string"
+        },
+        "photoUrl": {
+          "type": "string"
+        },
+        "reporterName": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["WAITING", "IN_PROGRESS", "DONE", "CANCELLED"]
+        },
+        "location": {
+          "type": "string",
+          "enum": ["Timika", "Surabaya"]
+        },
+        "repairPhotoUrl": {
+          "type": "string"
+        },
+        "resolutionNotes": {
+          "type": "string"
+        },
+        "cancellationReason": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "containerNumber", "priority", "category", "description", "photoUrl", "reporterName", "timestamp", "status", "location", "updatedAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile containing name and duty location.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string",
+          "enum": ["Timika", "Surabaya"]
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": ["uid", "name", "location", "email"]
+    }
+  },
+  "firestore": {
+    "requests/{requestId}": {
+      "schema": "ServiceRequest",
+      "description": "Collection of all container service requests."
+    },
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile with their location role."
+    }
+  }
+}
