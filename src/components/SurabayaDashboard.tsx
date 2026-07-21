@@ -246,7 +246,7 @@ export default function SurabayaDashboard({
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in w-full">
       {/* Access Restriction Notice for Surabaya Dashboard */}
       {!isAuthorized && (
         <div className="bg-amber-500/10 border border-amber-500/25 text-amber-900 text-xs px-4 py-3.5 rounded-xl flex items-center space-x-3 shadow-sm">
@@ -261,9 +261,9 @@ export default function SurabayaDashboard({
       )}
 
       {/* Workshop Controls & Filters */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
         <div className="flex items-center space-x-3.5">
-          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
             <Wrench className="h-5 w-5" />
           </div>
           <div>
@@ -279,13 +279,13 @@ export default function SurabayaDashboard({
         {/* Filters Grid */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Category Filter */}
-          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60">
-            <Filter className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-slate-500 font-mono font-bold uppercase text-[9px]">Cat:</span>
+          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60 flex-1 sm:flex-none">
+            <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <span className="text-slate-500 font-mono font-bold uppercase text-[9px] shrink-0">Cat:</span>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="font-bold bg-transparent focus:outline-none text-slate-700 font-mono text-xs cursor-pointer"
+              className="font-bold bg-transparent focus:outline-none text-slate-700 font-mono text-xs cursor-pointer w-full"
             >
               <option value="All">{language === "ENG" ? "ALL CATEGORIES" : "SEMUA KATEGORI"}</option>
               <option value={IssueCategory.ELECTRICAL}>{language === "ENG" ? "ELECTRICAL" : "KELISTRIKAN"}</option>
@@ -296,13 +296,13 @@ export default function SurabayaDashboard({
           </div>
 
           {/* Priority Filter */}
-          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60">
-            <AlertCircle className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-slate-500 font-mono font-bold uppercase text-[9px]">Prio:</span>
+          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60 flex-1 sm:flex-none">
+            <AlertCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <span className="text-slate-500 font-mono font-bold uppercase text-[9px] shrink-0">Prio:</span>
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
-              className="font-bold bg-transparent focus:outline-none text-slate-700 font-mono text-xs cursor-pointer"
+              className="font-bold bg-transparent focus:outline-none text-slate-700 font-mono text-xs cursor-pointer w-full"
             >
               <option value="All">{language === "ENG" ? "ALL PRIORITIES" : "SEMUA PRIORITAS"}</option>
               <option value={PriorityLevel.LOW}>{language === "ENG" ? "LOW" : "RENDAH"}</option>
@@ -313,14 +313,14 @@ export default function SurabayaDashboard({
           </div>
 
           {/* Operator Selector */}
-          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60">
-            <User className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-slate-500 font-mono font-bold uppercase text-[9px]">{t.operatorLabel}:</span>
+          <div className="flex items-center space-x-2 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs bg-slate-50/60 flex-1 sm:flex-none">
+            <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <span className="text-slate-500 font-mono font-bold uppercase text-[9px] shrink-0">{t.operatorLabel}:</span>
             <select
               value={operatorName}
               disabled={isAuthorized} // Freeze to active user if they are the authorized operator
               onChange={(e) => setOperatorName(e.target.value)}
-              className={`font-extrabold bg-transparent focus:outline-none text-slate-700 font-mono text-xs ${isAuthorized ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
+              className={`font-extrabold bg-transparent focus:outline-none text-slate-700 font-mono text-xs w-full ${isAuthorized ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
               {loggedInUser && !["Bambang Santoso", "Hendra Wijaya", "Syarifuddin"].includes(loggedInUser.name) && (
                 <option value={loggedInUser.name}>{loggedInUser.name}</option>
@@ -333,15 +333,15 @@ export default function SurabayaDashboard({
         </div>
       </div>
 
-      {/* Kanban Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+      {/* Kanban Board Grid - Now fully fluid and responsive */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 items-start w-full">
         {columns.map((col) => {
           const colRequests = getRequestsByStatus(col.status);
 
           return (
             <div
               key={col.status}
-              className={`rounded-2xl border flex flex-col h-[590px] bg-slate-50/50 ${col.bg}`}
+              className={`rounded-2xl border flex flex-col h-[650px] w-full min-w-[250px] bg-slate-50/50 shadow-sm ${col.bg}`}
             >
               {/* Column Header */}
               <div
@@ -369,11 +369,11 @@ export default function SurabayaDashboard({
                         onClick={() => {
                           if (editingId !== req.id) onSelectRequest(req);
                         }}
-                        className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-400 hover:shadow-md transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer"
+                        className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-400 hover:shadow-md transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer max-w-full"
                       >
                         {/* Header Details */}
-                        <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span className="font-bold text-slate-950 group-hover:text-blue-600 underline decoration-dotted font-bold">
+                        <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono">
+                          <span className="font-bold text-slate-950 group-hover:text-blue-600 underline decoration-dotted">
                             {req.id}
                           </span>
                           <span className="text-slate-400 text-[9px]">
@@ -383,7 +383,7 @@ export default function SurabayaDashboard({
 
                         {/* Container tag */}
                         <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-black text-slate-900 tracking-wide">
+                          <span className="font-mono text-xs font-black text-slate-900 tracking-wide break-words">
                             {req.containerNumber}
                           </span>
                         </div>
@@ -407,11 +407,11 @@ export default function SurabayaDashboard({
                         {/* Inline Edit Mode vs Normal View Mode */}
                         {editingId === req.id ? (
                           <div className="space-y-3 pt-1" onClick={(e) => e.stopPropagation()}>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <select 
                                 value={editPriority} 
                                 onChange={(e) => setEditPriority(e.target.value as PriorityLevel)}
-                                className="text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                                className="flex-[1_1_100px] min-w-0 text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
                               >
                                 <option value={PriorityLevel.LOW}>LOW</option>
                                 <option value={PriorityLevel.MEDIUM}>MEDIUM</option>
@@ -422,7 +422,7 @@ export default function SurabayaDashboard({
                               <select 
                                 value={editCategory} 
                                 onChange={(e) => setEditCategory(e.target.value as IssueCategory)}
-                                className="text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
+                                className="flex-[1_1_100px] min-w-0 text-[10px] font-semibold px-2 py-1.5 rounded border border-slate-300 outline-none"
                               >
                                 <option value={IssueCategory.ELECTRICAL}>Electrical</option>
                                 <option value={IssueCategory.STRUCTURAL}>Structural</option>
@@ -438,7 +438,7 @@ export default function SurabayaDashboard({
                               rows={3}
                             />
                             
-                            <div className="flex gap-2 justify-end pt-1">
+                            <div className="flex flex-wrap gap-2 justify-end pt-1">
                               <button 
                                 type="button"
                                 onClick={(e) => {
@@ -476,7 +476,7 @@ export default function SurabayaDashboard({
                                 disabled={!isAuthorized}
                                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                               >
-                                <Play className="h-3 w-3 fill-current" />
+                                <Play className="h-3 w-3 fill-current shrink-0" />
                                 <span>{t.acceptRepairBtn}</span>
                               </button>
                             )}
@@ -489,7 +489,7 @@ export default function SurabayaDashboard({
                                   disabled={!isAuthorized}
                                   className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                                 >
-                                  <CheckCircle className="h-3 w-3" />
+                                  <CheckCircle className="h-3 w-3 shrink-0" />
                                   <span>{t.completeBtn}</span>
                                 </button>
                                 {loggedInUser?.email === "mpigome44@gmail.com" && (
@@ -499,7 +499,7 @@ export default function SurabayaDashboard({
                                     disabled={!isAuthorized}
                                     className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
                                   >
-                                    <XCircle className="h-3 w-3" />
+                                    <XCircle className="h-3 w-3 shrink-0" />
                                     <span>{t.cancelBtn}</span>
                                   </button>
                                 )}
@@ -523,7 +523,7 @@ export default function SurabayaDashboard({
                             )}
 
                             {/* Audit Details link & Action Buttons */}
-                            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2 font-mono">
+                            <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2 font-mono gap-2">
                               <span className="truncate max-w-[100px]">By: {req.reporterName}</span>
                               <button 
                                 type="button"
@@ -531,7 +531,7 @@ export default function SurabayaDashboard({
                                   e.stopPropagation();
                                   onSelectRequest(req);
                                 }}
-                                className="text-slate-500 hover:text-blue-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold"
+                                className="text-slate-500 hover:text-blue-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold shrink-0"
                               >
                                 <FileText className="h-3.5 w-3.5" />
                                 <span>{t.auditTrailBtn} ({req.auditLogs.length})</span>
@@ -540,7 +540,7 @@ export default function SurabayaDashboard({
 
                             {/* Edit & Delete Action Buttons for Surabaya / Admin */}
                             {isAuthorized && (
-                              <div className="flex items-center justify-end gap-3 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
                                 <button 
                                   type="button"
                                   onClick={(e) => startEdit(e, req)}
