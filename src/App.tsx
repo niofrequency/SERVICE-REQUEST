@@ -69,6 +69,30 @@ interface FirestoreErrorInfo {
   }
 }
 
+// Helper to compress/resize images below Firestore 1MB limit
+const compressImage = (base64Str: string, maxWidth = 800, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+  });
+};
+
 export default function App() {
   // Localization state (Durable persistence)
   const [language, setLanguage] = useState<"ENG" | "IND">(() => {
@@ -450,9 +474,12 @@ export default function App() {
   };
 
   // Direct Mobile Photo Upload Trigger (No AI Analysis)
-  const handleMobileScanImage = (base64Data: string) => {
+  const handleMobileScanImage = async (base64Data: string) => {
     setIsMobileScanning(true);
     setMobileScanError(null);
+    
+    // Compress image to prevent Firestore 1MB limits
+    const compressedPhoto = await compressImage(base64Data);
     
     if (currentRole === LocationTeam.SURABAYA || currentRole === LocationTeam.JAKARTA) {
       // In Surabaya or Jakarta mode: Attach completion photo to the currently selected active ticket
@@ -465,7 +492,7 @@ export default function App() {
           location: currentRole as LocationTeam,
           notes: "Repair completed with direct mobile photo upload.",
           resolutionNotes: "Structural repair / maintenance completed and verified via mobile photo.",
-          repairPhotoUrl: base64Data
+          repairPhotoUrl: compressedPhoto
         });
         
         setMobileScanStatus(language === "ENG" ? `Success! Photo attached and ${selectedRequest.id} marked as DONE.` : `Sukses! Foto terlampir & ${selectedRequest.id} selesai.`);
@@ -478,7 +505,7 @@ export default function App() {
       }
     } else {
       // In Timika / Admin mode: Instantly attach to the intake form
-      setPrefilledPhoto(base64Data);
+      setPrefilledPhoto(compressedPhoto);
       setMobileScanStatus(language === "ENG" ? "Photo Attached! Please fill in the container details below." : "Foto Terlampir! Silakan lengkapi detail kontainer di bawah.");
       
       setTimeout(() => {
@@ -503,6 +530,7 @@ export default function App() {
     description: string;
     photoUrl: string | null;
     reporterName: string;
+    destinationLocation?: LocationTeam;
   }) => {
     try {
       const numericIds = requests
@@ -514,18 +542,26 @@ export default function App() {
       const nextNum = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
       const newId = `REQ-2026-${String(nextNum).padStart(3, "0")}`;
       
+      const targetLocation = payload.destinationLocation || LocationTeam.SURABAYA;
       const timestamp = new Date().toISOString();
+
+      // Compress photo if provided to ensure it stays below 1 MB
+      let finalPhotoUrl = payload.photoUrl;
+      if (finalPhotoUrl && finalPhotoUrl.startsWith("data:image")) {
+        finalPhotoUrl = await compressImage(finalPhotoUrl);
+      }
+
       const newRequest: ServiceRequest = {
         id: newId,
         containerNumber: payload.containerNumber.toUpperCase().trim().replace(/[\s-]+/g, "-"),
         priority: payload.priority,
         category: payload.category,
         description: payload.description,
-        photoUrl: payload.photoUrl || null,
+        photoUrl: finalPhotoUrl,
         reporterName: payload.reporterName,
         timestamp,
         status: RequestStatus.WAITING,
-        location: LocationTeam.TIMIKA,
+        location: targetLocation, // Routes specifically to Surabaya or Jakarta
         updatedAt: timestamp,
         auditLogs: [
           {
@@ -536,7 +572,7 @@ export default function App() {
             operator: payload.reporterName,
             location: LocationTeam.TIMIKA,
             timestamp,
-            notes: "Initial service request submitted by field technician in Timika."
+            notes: `Initial service request submitted by field technician in Timika, routed to ${targetLocation}.`
           }
         ]
       };
@@ -580,14 +616,20 @@ export default function App() {
 
       const updatedRequest = { ...request };
 
+      // Compress repair photo if provided
+      let finalRepairPhoto = updatePayload.repairPhotoUrl;
+      if (finalRepairPhoto && finalRepairPhoto.startsWith("data:image")) {
+        finalRepairPhoto = await compressImage(finalRepairPhoto);
+      }
+
       // Specific validation based on state transitions
       if (updatePayload.status === RequestStatus.DONE) {
         if (!updatePayload.resolutionNotes) {
           throw new Error("Resolution notes are required to complete a request.");
         }
         updatedRequest.resolutionNotes = updatePayload.resolutionNotes;
-        if (updatePayload.repairPhotoUrl) {
-          updatedRequest.repairPhotoUrl = updatePayload.repairPhotoUrl;
+        if (finalRepairPhoto) {
+          updatedRequest.repairPhotoUrl = finalRepairPhoto;
         }
       } else if (updatePayload.status === RequestStatus.CANCELLED) {
         if (!updatePayload.cancellationReason) {
@@ -1302,10 +1344,10 @@ export default function App() {
                   />
                 )}
 
-                {/* 2. Surabaya View (Workshop Repairs) */}
+                {/* 2. Surabaya View (Workshop Repairs) - Filters only Surabaya requests */}
                 {currentRole === LocationTeam.SURABAYA && (
                   <SurabayaDashboard
-                    requests={requests}
+                    requests={requests.filter((r) => r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA))}
                     onStatusUpdate={handleStatusUpdate}
                     onSelectRequest={(req) => setSelectedRequest(req)}
                     onPrint={handlePrintRequest}
@@ -1314,10 +1356,10 @@ export default function App() {
                   />
                 )}
 
-                {/* 3. Jakarta View (Workshop Repairs) */}
+                {/* 3. Jakarta View (Workshop Repairs) - Filters only Jakarta requests */}
                 {currentRole === LocationTeam.JAKARTA && (
                   <JakartaDashboard
-                    requests={requests}
+                    requests={requests.filter((r) => r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA)}
                     onStatusUpdate={handleStatusUpdate}
                     onSelectRequest={(req) => setSelectedRequest(req)}
                     onPrint={handlePrintRequest}
@@ -1394,7 +1436,7 @@ export default function App() {
                         </div>
                         <div className="space-y-6">
                           <SurabayaDashboard
-                            requests={requests}
+                            requests={requests.filter((r) => r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA))}
                             onStatusUpdate={handleStatusUpdate}
                             onSelectRequest={(req) => setSelectedRequest(req)}
                             onPrint={handlePrintRequest}
@@ -1402,7 +1444,7 @@ export default function App() {
                             loggedInUser={loggedInUser}
                           />
                           <JakartaDashboard
-                            requests={requests}
+                            requests={requests.filter((r) => r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA)}
                             onStatusUpdate={handleStatusUpdate}
                             onSelectRequest={(req) => setSelectedRequest(req)}
                             onPrint={handlePrintRequest}
