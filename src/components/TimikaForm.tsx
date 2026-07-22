@@ -19,7 +19,8 @@ import {
   Trash2,
   X,
   Save,
-  Lock
+  Lock,
+  Send
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -32,6 +33,7 @@ interface TimikaFormProps {
     description: string;
     photoUrl: string | null;
     reporterName: string;
+    destinationLocation?: LocationTeam; // Added destination location support
   }) => Promise<void>;
   requests: ServiceRequest[];
   onSelectRequest: (request: ServiceRequest) => void;
@@ -40,7 +42,7 @@ interface TimikaFormProps {
   prefilledContainerNumber?: string;
   prefilledPhoto?: string | null;
   onClearPrefilled?: () => void;
-  onNavigateHistory?: () => void; // Added for the clickable history card
+  onNavigateHistory?: () => void;
 }
 
 // Helper to automatically format container number to ISO 6346 with hyphens (e.g. CBHU-265392-1)
@@ -49,18 +51,15 @@ const formatContainerNumber = (val: string): string => {
   if (clean.length === 0) return "";
   
   let formatted = "";
-  // Part 1: Owner + Product code (first 4 characters)
   const part1 = clean.slice(0, 4);
   formatted += part1;
   
   if (clean.length > 4) {
-    // Part 2: Serial number (next 6 characters)
     const part2 = clean.slice(4, 10);
     formatted += `-${part2}`;
   }
   
   if (clean.length > 10) {
-    // Part 3: Check digit (1 character)
     const part3 = clean.slice(10, 11);
     formatted += `-${part3}`;
   }
@@ -89,6 +88,7 @@ export default function TimikaForm({
   const [description, setDescription] = useState("");
   const [reporterName, setReporterName] = useState(() => loggedInUser?.name || "");
   const [photo, setPhoto] = useState<string | null>(null);
+  const [destinationLocation, setDestinationLocation] = useState<LocationTeam>(LocationTeam.SURABAYA); // Default destination
 
   // Edit Card State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -185,7 +185,7 @@ export default function TimikaForm({
     }
   };
 
-  // Direct manual file upload (No AI OCR Processing)
+  // Direct manual file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -229,6 +229,7 @@ export default function TimikaForm({
           description,
           photoUrl: photo,
           reporterName,
+          destinationLocation, // Pass destination selection to parent
         });
         setContainerNumber("");
         setDescription("");
@@ -246,6 +247,7 @@ export default function TimikaForm({
             description,
             photoUrl: photo,
             reporterName,
+            destinationLocation,
           }),
         });
 
@@ -389,7 +391,7 @@ export default function TimikaForm({
               </div>
             </div>
 
-            {/* ACTION CONTROLS: Locked if sent/in-progress/done. Admin override for Delete added. */}
+            {/* ACTION CONTROLS: Admin override for Delete added */}
             {isAuthorized && (
               <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100/80 mt-1" onClick={(e) => e.stopPropagation()}>
                 {!locked ? (
@@ -412,7 +414,7 @@ export default function TimikaForm({
                 ) : (
                   <div className="flex items-center justify-between w-full">
                     <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
-                      <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked (Sent to Surabaya)" : "Terkunci (Dikirim ke Surabaya)"}
+                      <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked" : "Terkunci"}
                     </span>
                     {isAdmin && (
                       <button 
@@ -428,26 +430,6 @@ export default function TimikaForm({
               </div>
             )}
           </>
-        )}
-
-        {req.status === RequestStatus.DONE && (
-          <div className="mt-2 bg-emerald-50/50 border border-emerald-100/60 rounded-lg p-2 flex items-start gap-2 animate-fade-in text-[11px] leading-relaxed">
-            <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-extrabold text-emerald-950 block text-[9px] uppercase tracking-wider">{t.repairCompletedBanner}</span>
-              <span className="text-emerald-800 line-clamp-1">{req.resolutionNotes}</span>
-            </div>
-          </div>
-        )}
-
-        {req.status === RequestStatus.CANCELLED && (
-          <div className="mt-2 bg-rose-50/50 border border-rose-100/60 rounded-lg p-2 flex items-start gap-2 animate-fade-in text-[11px] leading-relaxed">
-            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-extrabold text-rose-950 block text-[9px] uppercase tracking-wider">{t.requestCancelledBanner}</span>
-              <span className="text-rose-800 line-clamp-1">{req.cancellationReason}</span>
-            </div>
-          </div>
         )}
       </div>
     );
@@ -601,6 +583,39 @@ export default function TimikaForm({
             </div>
           </div>
 
+          {/* Destination Hub Selector (Surabaya or Jakarta) */}
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
+              {language === "ENG" ? "Send Destination Hub *" : "Kirim Tujuan Hub *"}
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDestinationLocation(LocationTeam.SURABAYA)}
+                disabled={!isAuthorized}
+                className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  destinationLocation === LocationTeam.SURABAYA
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                SURABAYA WORKSHOP
+              </button>
+              <button
+                type="button"
+                onClick={() => setDestinationLocation(LocationTeam.JAKARTA)}
+                disabled={!isAuthorized}
+                className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  destinationLocation === LocationTeam.JAKARTA
+                    ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                JAKARTA HUB
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
               {t.descriptionLabel} *
@@ -636,7 +651,10 @@ export default function TimikaForm({
                 <span>{t.publishingBtn}</span>
               </>
             ) : (
-              <span>{t.submitBtn}</span>
+              <>
+                <Send className="h-3.5 w-3.5" />
+                <span>{language === "ENG" ? `Send to ${destinationLocation}` : `Kirim ke ${destinationLocation}`}</span>
+              </>
             )}
           </button>
         </form>
@@ -658,7 +676,7 @@ export default function TimikaForm({
                 </h3>
               </div>
               <p className="text-[11px] text-slate-400">
-                {language === "ENG" ? "Active requests sent to Surabaya" : "Permintaan aktif yang dikirim ke Surabaya"}
+                {language === "ENG" ? "Active requests sent to Hubs" : "Permintaan aktif yang dikirim ke Hub"}
               </p>
             </div>
             <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold">
