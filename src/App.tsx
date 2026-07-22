@@ -1210,8 +1210,8 @@ export default function App() {
               </div>
             )}
 
-            {/* TAB VIEW: DASHBOARD */}
-            {currentTab === "dashboard" && (
+            {/* TAB VIEW SWITCHER */}
+            {currentTab === "dashboard" ? (
               <>
                 {/* Port Status Scoreboard - Hidden on Mobile */}
                 <div className="hidden md:block space-y-3.5">
