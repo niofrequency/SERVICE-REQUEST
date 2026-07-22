@@ -1,3 +1,4 @@
+// src/components/JakartaDashboard.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase"; // Adjust path if needed
@@ -24,7 +25,8 @@ import {
   X,
   Save,
   Printer,
-  Lock
+  Lock,
+  ArrowRight
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -62,6 +64,9 @@ export default function JakartaDashboard({
   const [filterCategory, setFilterCategory] = useState<string>("All");
   const [filterPriority, setFilterPriority] = useState<string>("All");
   const [operatorName, setOperatorName] = useState("Dimas Prasetyo");
+
+  // Flowchart Queue Tab Filter ("all" or specific statuses)
+  const [queueFilter, setQueueFilter] = useState<"all" | "awaiting" | "in-progress" | "completed">("all");
 
   // Interaction Modals/States
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
@@ -143,10 +148,15 @@ export default function JakartaDashboard({
     }
   };
 
-  // Filtered requests
+  // Filtered requests based on category, priority, and flowchart queue selection
   const filteredRequests = requests.filter((r) => {
     if (filterCategory !== "All" && r.category !== filterCategory) return false;
     if (filterPriority !== "All" && r.priority !== filterPriority) return false;
+    
+    if (queueFilter === "awaiting" && r.status !== RequestStatus.WAITING) return false;
+    if (queueFilter === "in-progress" && r.status !== RequestStatus.IN_PROGRESS) return false;
+    if (queueFilter === "completed" && r.status !== RequestStatus.DONE) return false;
+
     return true;
   });
 
@@ -227,6 +237,10 @@ export default function JakartaDashboard({
     handleCloseActionDialog();
   };
 
+  const waitingCount = requests.filter(r => r.status === RequestStatus.WAITING).length;
+  const inProgressCount = requests.filter(r => r.status === RequestStatus.IN_PROGRESS).length;
+  const completedCount = requests.filter(r => r.status === RequestStatus.DONE).length;
+
   const columns = [
     {
       title: t.statAwaiting,
@@ -268,6 +282,92 @@ export default function JakartaDashboard({
           </div>
         </div>
       )}
+
+      {/* Interactive Flow-Chart Pipeline Layout (Single Horizontal Row) */}
+      <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            {language === "ENG" ? "Jakarta Workshop Service Flowchart Pipeline" : "Alur Pipa Layanan Workshop Jakarta"}
+          </h3>
+          {queueFilter !== "all" && (
+            <button 
+              onClick={() => setQueueFilter("all")} 
+              className="text-[10px] font-mono font-bold bg-purple-600 text-white px-2.5 py-1 rounded-lg hover:bg-purple-700 transition"
+            >
+              Show All Queues &times;
+            </button>
+          )}
+        </div>
+
+        {/* Single Horizontal Row Flex Layout */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
+          {/* Box 1: Awaiting Repair */}
+          <div
+            onClick={() => setQueueFilter(queueFilter === "awaiting" ? "all" : "awaiting")}
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
+              queueFilter === "awaiting" ? "bg-amber-50 border-amber-500 shadow-md" : "bg-white border-slate-300 hover:border-amber-500 shadow-sm"
+            }`}
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Step 1</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
+              <p className="text-[10px] text-slate-500">Click to filter queue</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {waitingCount}
+            </div>
+          </div>
+
+          {/* Arrow 1 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+              <ArrowRight className="h-4 w-4 animate-pulse text-purple-600" />
+            </div>
+          </div>
+
+          {/* Box 2: In Progress */}
+          <div
+            onClick={() => setQueueFilter(queueFilter === "in-progress" ? "all" : "in-progress")}
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
+              queueFilter === "in-progress" ? "bg-purple-50 border-purple-500 shadow-md" : "bg-white border-slate-300 hover:border-purple-500 shadow-sm"
+            }`}
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-purple-600 uppercase">Step 2</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">In Progress</h4>
+              <p className="text-[10px] text-slate-500">Click to filter active repairs</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {inProgressCount}
+            </div>
+          </div>
+
+          {/* Arrow 2 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+              <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
+            </div>
+          </div>
+
+          {/* Box 3: Completed */}
+          <div
+            onClick={() => setQueueFilter(queueFilter === "completed" ? "all" : "completed")}
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
+              queueFilter === "completed" ? "bg-emerald-50 border-emerald-500 shadow-md" : "bg-white border-slate-300 hover:border-emerald-500 shadow-sm"
+            }`}
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase">Step 3</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Completed</h4>
+              <p className="text-[10px] text-slate-500">Click to filter archives</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {completedCount}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Workshop Controls & Filters */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
