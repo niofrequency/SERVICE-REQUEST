@@ -630,7 +630,9 @@ export default function App() {
 
       const oldStatus = request.status;
       const timestamp = new Date().toISOString();
-      const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
+      
+      const userEmail = auth.currentUser?.email || loggedInUser?.email;
+      const isAdmin = userEmail === "mpigome44@gmail.com";
 
       if (updatePayload.location === LocationTeam.TIMIKA) {
         if (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE) {
@@ -709,7 +711,10 @@ export default function App() {
 
   // Interactive Delete Handler (Restricted to Timika / Admin)
   const handleDeleteRequest = async (id: string) => {
-    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+    const userEmail = auth.currentUser?.email || loggedInUser?.email;
+    const isAdmin = userEmail === "mpigome44@gmail.com";
+    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
+    
     if (!isTimikaUser) {
       alert("Unauthorized: Only Timika personnel and Admin can delete service requests.");
       return;
@@ -727,7 +732,10 @@ export default function App() {
 
   // Interactive Update Handler with safe field sanitization
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
-    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+    const userEmail = auth.currentUser?.email || loggedInUser?.email;
+    const isAdmin = userEmail === "mpigome44@gmail.com";
+    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
+
     if (!isTimikaUser) {
       alert("Unauthorized: Only Timika personnel and Admin can edit active requests.");
       return;
@@ -760,10 +768,10 @@ export default function App() {
         requestId: id,
         fromStatus: request.status,
         toStatus: updatedFields.status || request.status,
-        operator: loggedInUser ? loggedInUser.name : "Timika Inspector",
-        location: LocationTeam.TIMIKA,
+        operator: loggedInUser ? loggedInUser.name : (isAdmin ? "Admin Inspector" : "Timika Inspector"),
+        location: loggedInUser?.location || LocationTeam.TIMIKA,
         timestamp,
-        notes: `Timika staff updated details: ${changes}.`
+        notes: `Admin/Staff updated details: ${changes}.`
       };
 
       updated.auditLogs = [...(request.auditLogs || []), auditLog];
