@@ -26,7 +26,8 @@ import {
   LayoutDashboard,
   Filter,
   FileText,
-  Trash2
+  Trash2,
+  ArrowRight
 } from "lucide-react";
 import { locales } from "./locales.js";
 
@@ -129,8 +130,8 @@ export default function App() {
 
   const t = locales[language];
 
-  // Top-Level Navigation State ("dashboard" vs "in-progress" vs "history")
-  const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history">("dashboard");
+  // Top-Level Navigation State ("dashboard" vs "in-progress" vs "history" vs specific flowchart tabs)
+  const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history" | "awaiting" | "completed">("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DONE" | "CANCELLED">("ALL");
 
@@ -1181,17 +1182,22 @@ export default function App() {
               <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span>{language === "ENG" ? "Dashboard" : "Dashboard"}</span>
             </button>
-            <button
-              onClick={() => setCurrentTab("in-progress")}
-              className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                currentTab === "in-progress"
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
-              }`}
-            >
-              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-              <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length})</span>
-            </button>
+
+            {/* Hide "In Progress" tab for Surabaya or Jakarta users */}
+            {currentRole === LocationTeam.TIMIKA && (
+              <button
+                onClick={() => setCurrentTab("in-progress")}
+                className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  currentTab === "in-progress"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length})</span>
+              </button>
+            )}
+
             <button
               onClick={() => setCurrentTab("history")}
               className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
@@ -1261,90 +1267,85 @@ export default function App() {
             {/* TAB VIEW SWITCHER */}
             {currentTab === "dashboard" ? (
               <>
-                {/* Port Status Scoreboard - Hidden on Mobile */}
+                {/* Interactive Flowchart Pipeline Scoreboard matching your sketch */}
                 <div className="hidden md:block space-y-3.5">
                   <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
                     <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                      {language === "ENG" ? "Real-Time Container Service Pipelines" : "Pipa Layanan Kontainer Real-Time"}
+                      {language === "ENG" ? "Real-Time Container Service Flowchart Pipeline" : "Alur Pipa Layanan Kontainer Real-Time"}
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
                       {language === "ENG" 
-                        ? "The status counters below track current service requests as they move from intake to completion. They represent:"
-                        : "Penghitung status di bawah memantau permintaan layanan saat ini dari mulai masuk hingga selesai. Keterangannya:"}
+                        ? "Click any pipeline box below to quickly filter and open the respective request queue."
+                        : "Klik kotak alur di bawah untuk memfilter dan membuka antrean permintaan."}
                     </p>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-2.5 text-[10px] font-mono text-slate-600">
-                      <li className="flex items-center space-x-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                        <span><strong>{t.statTotal}:</strong> {language === "ENG" ? "All submitted requests" : "Semua permintaan masuk"}</span>
-                      </li>
-                      <li className="flex items-center space-x-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        <span><strong>{t.statAwaiting}:</strong> {language === "ENG" ? "Queued / awaiting attention" : "Antrean / menunggu ditindak"}</span>
-                      </li>
-                      <li className="flex items-center space-x-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span><strong>{t.statInProgress}:</strong> {language === "ENG" ? "Currently being repaired" : "Sedang dalam perbaikan fisik"}</span>
-                      </li>
-                      <li className="flex items-center space-x-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span><strong>{t.statCompleted}:</strong> {language === "ENG" ? "Repairs certified & done" : "Selesai & disertifikasi"}</span>
-                      </li>
-                      <li className="flex items-center space-x-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                        <span><strong>{t.statCancelled}:</strong> {language === "ENG" ? "Voided or cancelled tasks" : "Dibatalkan atau dibatalkan"}</span>
-                      </li>
-                    </ul>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-                      <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg group-hover:scale-105 transition-transform">
-                        <ClipboardList className="h-5 w-5" />
+                  {/* Flowchart Layout with Arrow Connectors */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    {/* 1. Awaiting Repair Box */}
+                    <div 
+                      onClick={() => setCurrentTab("awaiting")}
+                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group relative flex items-center justify-between"
+                    >
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-mono text-amber-600 uppercase font-bold tracking-wider">Step 1</span>
+                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
+                        <p className="text-[11px] text-slate-500">Click to view queued items</p>
                       </div>
-                      <div>
-                        <span className="block text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider">{t.statTotal}</span>
-                        <span className="text-xl font-extrabold font-mono text-slate-800 leading-tight">{totalTickets}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-                      <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg group-hover:scale-105 transition-transform">
-                        <Clock className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-mono text-amber-500 uppercase font-bold tracking-wider">{t.statAwaiting}</span>
-                        <span className="text-xl font-extrabold font-mono text-amber-600 leading-tight">{waitingTickets}</span>
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
+                        {waitingTickets}
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-105 transition-transform">
-                        <BarChart3 className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-mono text-blue-500 uppercase font-bold tracking-wider">{t.statInProgress}</span>
-                        <span className="text-xl font-extrabold font-mono text-blue-600 leading-tight">{activeRepairs}</span>
+                    {/* Arrow Connector 1 */}
+                    <div className="hidden md:flex justify-center text-slate-400">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+                        <ArrowRight className="h-5 w-5 animate-pulse text-blue-600" />
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
-                      <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-105 transition-transform">
-                        <CheckCircle2 className="h-5 w-5" />
+                    {/* 2. In Progress Box */}
+                    <div 
+                      onClick={() => setCurrentTab("in-progress")}
+                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group relative flex items-center justify-between"
+                    >
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-mono text-blue-600 uppercase font-bold tracking-wider">Step 2</span>
+                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">In Progress</h4>
+                        <p className="text-[11px] text-slate-500">Click to view active repairs</p>
                       </div>
-                      <div>
-                        <span className="block text-[10px] font-mono text-emerald-500 uppercase font-bold tracking-wider">{t.statCompleted}</span>
-                        <span className="text-xl font-extrabold font-mono text-emerald-600 leading-tight">{completedJobs}</span>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
+                        {activeRepairs}
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group col-span-2 md:col-span-1">
-                      <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg group-hover:scale-105 transition-transform">
-                        <AlertTriangle className="h-5 w-5" />
+                    {/* Arrow Connector 2 (Centered or trailing layout) */}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center pt-2">
+                    <div className="hidden md:block"></div>
+                    <div className="hidden md:flex justify-center text-slate-400">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+                        <ArrowRight className="h-5 w-5 animate-pulse text-emerald-600" />
                       </div>
-                      <div>
-                        <span className="block text-[10px] font-mono text-rose-500 uppercase font-bold tracking-wider">{t.statCancelled}</span>
-                        <span className="text-xl font-extrabold font-mono text-rose-600 leading-tight">{cancelledJobs}</span>
+                    </div>
+                    <div className="hidden md:block"></div>
+                  </div>
+
+                  {/* 3. Completed Box */}
+                  <div className="grid grid-cols-1 max-w-md mx-auto">
+                    <div 
+                      onClick={() => setCurrentTab("completed")}
+                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group relative flex items-center justify-between"
+                    >
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-mono text-emerald-600 uppercase font-bold tracking-wider">Step 3</span>
+                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">Completed</h4>
+                        <p className="text-[11px] text-slate-500">Click to view certified archives</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
+                        {completedJobs}
                       </div>
                     </div>
                   </div>
@@ -1448,6 +1449,64 @@ export default function App() {
                   />
                 )}
               </>
+            ) : currentTab === "awaiting" ? (
+              /* TAB VIEW: AWAITING REPAIR QUEUE */
+              <div className="space-y-6 max-w-5xl mx-auto w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight flex items-center space-x-2.5">
+                      <Clock className="h-6 w-6 text-amber-500" />
+                      <span>Awaiting Repair Queue</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Containers awaiting workshop intervention.</p>
+                  </div>
+                  <button onClick={() => setCurrentTab("dashboard")} className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-bold">Back to Dashboard</button>
+                </div>
+                <div className="space-y-3">
+                  {requests.filter(r => r.status === RequestStatus.WAITING).length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 font-mono text-xs uppercase">No awaiting requests</div>
+                  ) : (
+                    requests.filter(r => r.status === RequestStatus.WAITING).map((req) => (
+                      <div key={req.id} onClick={() => setSelectedRequest(req)} className="p-4 rounded-xl border border-slate-200 hover:border-amber-400 transition cursor-pointer bg-slate-50 flex justify-between items-center">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-amber-600">{req.id} • {req.containerNumber}</span>
+                          <p className="text-xs text-slate-600 mt-1">{req.description}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-amber-100 text-amber-800">{req.status}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : currentTab === "completed" ? (
+              /* TAB VIEW: COMPLETED QUEUE */
+              <div className="space-y-6 max-w-5xl mx-auto w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight flex items-center space-x-2.5">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                      <span>Completed Certified Requests</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Finished and locked maintenance jobs.</p>
+                  </div>
+                  <button onClick={() => setCurrentTab("dashboard")} className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-bold">Back to Dashboard</button>
+                </div>
+                <div className="space-y-3">
+                  {requests.filter(r => r.status === RequestStatus.DONE).length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 font-mono text-xs uppercase">No completed requests</div>
+                  ) : (
+                    requests.filter(r => r.status === RequestStatus.DONE).map((req) => (
+                      <div key={req.id} onClick={() => setSelectedRequest(req)} className="p-4 rounded-xl border border-slate-200 hover:border-emerald-400 transition cursor-pointer bg-slate-50 flex justify-between items-center">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-emerald-600">{req.id} • {req.containerNumber}</span>
+                          <p className="text-xs text-slate-600 mt-1">{req.resolutionNotes}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800">{req.status}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             ) : currentTab === "in-progress" ? (
               /* TAB VIEW: IN PROGRESS */
               <div className="space-y-6 max-w-5xl mx-auto w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -1461,9 +1520,7 @@ export default function App() {
                       {language === "ENG" ? "Full ledger of active container service tickets currently deployed across hubs." : "Daftar lengkap tiket layanan kontainer aktif yang sedang berjalan."}
                     </p>
                   </div>
-                  <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-mono font-bold">
-                    {requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length} Active
-                  </span>
+                  <button onClick={() => setCurrentTab("dashboard")} className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-bold">Back to Dashboard</button>
                 </div>
 
                 <div className="space-y-3">
