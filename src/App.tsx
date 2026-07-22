@@ -1267,85 +1267,68 @@ export default function App() {
             {/* TAB VIEW SWITCHER */}
             {currentTab === "dashboard" ? (
               <>
-                {/* Interactive Flowchart Pipeline Scoreboard matching your sketch */}
+                {/* Restored 5-Card Scoreboard with Total, Awaiting, In Progress, Completed, Cancelled */}
                 <div className="hidden md:block space-y-3.5">
                   <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
                     <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                      {language === "ENG" ? "Real-Time Container Service Flowchart Pipeline" : "Alur Pipa Layanan Kontainer Real-Time"}
+                      {language === "ENG" ? "Real-Time Container Service Pipelines" : "Pipa Layanan Kontainer Real-Time"}
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
                       {language === "ENG" 
-                        ? "Click any pipeline box below to quickly filter and open the respective request queue."
-                        : "Klik kotak alur di bawah untuk memfilter dan membuka antrean permintaan."}
+                        ? "The status counters below track current service requests as they move from intake to completion."
+                        : "Penghitung status di bawah memantau permintaan layanan saat ini dari mulai masuk hingga selesai."}
                     </p>
                   </div>
 
-                  {/* Flowchart Layout with Arrow Connectors */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                    {/* 1. Awaiting Repair Box */}
-                    <div 
-                      onClick={() => setCurrentTab("awaiting")}
-                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group relative flex items-center justify-between"
-                    >
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-mono text-amber-600 uppercase font-bold tracking-wider">Step 1</span>
-                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
-                        <p className="text-[11px] text-slate-500">Click to view queued items</p>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-slate-300 hover:shadow transition-all group">
+                      <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg group-hover:scale-105 transition-transform">
+                        <ClipboardList className="h-5 w-5" />
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
-                        {waitingTickets}
+                      <div>
+                        <span className="block text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider">{t.statTotal}</span>
+                        <span className="text-xl font-extrabold font-mono text-slate-800 leading-tight">{totalTickets}</span>
                       </div>
                     </div>
 
-                    {/* Arrow Connector 1 */}
-                    <div className="hidden md:flex justify-center text-slate-400">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-                        <ArrowRight className="h-5 w-5 animate-pulse text-blue-600" />
+                    <div onClick={() => setCurrentTab("awaiting")} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-amber-400 hover:shadow transition-all group cursor-pointer">
+                      <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg group-hover:scale-105 transition-transform">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-mono text-amber-500 uppercase font-bold tracking-wider">{t.statAwaiting}</span>
+                        <span className="text-xl font-extrabold font-mono text-amber-600 leading-tight">{waitingTickets}</span>
                       </div>
                     </div>
 
-                    {/* 2. In Progress Box */}
-                    <div 
-                      onClick={() => setCurrentTab("in-progress")}
-                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group relative flex items-center justify-between"
-                    >
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-mono text-blue-600 uppercase font-bold tracking-wider">Step 2</span>
-                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">In Progress</h4>
-                        <p className="text-[11px] text-slate-500">Click to view active repairs</p>
+                    <div onClick={() => setCurrentTab("in-progress")} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-blue-400 hover:shadow transition-all group cursor-pointer">
+                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-105 transition-transform">
+                        <BarChart3 className="h-5 w-5" />
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
-                        {activeRepairs}
+                      <div>
+                        <span className="block text-[10px] font-mono text-blue-500 uppercase font-bold tracking-wider">{t.statInProgress}</span>
+                        <span className="text-xl font-extrabold font-mono text-blue-600 leading-tight">{activeRepairs}</span>
                       </div>
                     </div>
 
-                    {/* Arrow Connector 2 (Centered or trailing layout) */}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center pt-2">
-                    <div className="hidden md:block"></div>
-                    <div className="hidden md:flex justify-center text-slate-400">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-                        <ArrowRight className="h-5 w-5 animate-pulse text-emerald-600" />
+                    <div onClick={() => setCurrentTab("completed")} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-emerald-400 hover:shadow transition-all group cursor-pointer">
+                      <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-105 transition-transform">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-mono text-emerald-500 uppercase font-bold tracking-wider">{t.statCompleted}</span>
+                        <span className="text-xl font-extrabold font-mono text-emerald-600 leading-tight">{completedJobs}</span>
                       </div>
                     </div>
-                    <div className="hidden md:block"></div>
-                  </div>
 
-                  {/* 3. Completed Box */}
-                  <div className="grid grid-cols-1 max-w-md mx-auto">
-                    <div 
-                      onClick={() => setCurrentTab("completed")}
-                      className="bg-white p-5 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group relative flex items-center justify-between"
-                    >
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-mono text-emerald-600 uppercase font-bold tracking-wider">Step 3</span>
-                        <h4 className="text-sm font-extrabold text-slate-900 uppercase">Completed</h4>
-                        <p className="text-[11px] text-slate-500">Click to view certified archives</p>
+                    <div onClick={() => setCurrentTab("history")} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex items-center space-x-3.5 hover:border-rose-400 hover:shadow transition-all group col-span-2 md:col-span-1 cursor-pointer">
+                      <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg group-hover:scale-105 transition-transform">
+                        <AlertTriangle className="h-5 w-5" />
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-lg group-hover:scale-105 transition-transform">
-                        {completedJobs}
+                      <div>
+                        <span className="block text-[10px] font-mono text-rose-500 uppercase font-bold tracking-wider">{t.statCancelled}</span>
+                        <span className="text-xl font-extrabold font-mono text-rose-600 leading-tight">{cancelledJobs}</span>
                       </div>
                     </div>
                   </div>
@@ -1446,6 +1429,7 @@ export default function App() {
                     }}
                     onNavigateHistory={() => setCurrentTab("history")}
                     onNavigateInProgress={() => setCurrentTab("in-progress")}
+                    onNavigateTab={(tab) => setCurrentTab(tab)}
                   />
                 )}
               </>
