@@ -32,8 +32,8 @@ import {
 import { locales } from "./locales.js";
 
 // Firebase Integration imports
-import { db, auth } from "./firebase.js";
-import { uploadImageToStorage } from "./utils/storage.js";
+import { db, auth, storage } from "./firebase.js";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -75,7 +75,7 @@ interface FirestoreErrorInfo {
   }
 }
 
-// Helper to compress/resize images below Firestore 1MB limit
+// Helper to compress/resize images below Firestore 1MB limit (Bandwidth saving before Storage upload)
 const compressImage = (base64Str: string, maxWidth = 800, quality = 0.6): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -97,6 +97,28 @@ const compressImage = (base64Str: string, maxWidth = 800, quality = 0.6): Promis
       resolve(canvas.toDataURL("image/jpeg", quality));
     };
   });
+};
+
+// Inlined Firebase Storage Helper to prevent Base64 fallback issues
+const uploadImageToStorage = async (base64Str: string, containerId: string, type: "damage" | "repair"): Promise<string> => {
+  try {
+    // If it's already a regular http/https URL, return it directly
+    if (!base64Str || !base64Str.startsWith("data:image")) {
+      return base64Str;
+    }
+
+    const filename = `${type}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    const storageRef = ref(storage, `service_requests/${containerId}/${filename}`);
+
+    // Upload base64 data string to Firebase Storage
+    const snapshot = await uploadString(storageRef, base64Str, 'data_url');
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    
+    return downloadUrl;
+  } catch (error) {
+    console.error("Firebase Storage upload failed: ", error);
+    throw error;
+  }
 };
 
 export default function App() {
@@ -154,7 +176,7 @@ export default function App() {
   const surabayaTechs = ["Bambang Santoso", "Hendra Wijaya", "Syarifuddin", "Custom Name"];
   const jakartaTechs = ["Dimas Prasetyo", "Siti Nurhayati", "Custom Name"];
 
-  // Error logging function required by firebase-integration skill
+  // Error logging function
   const handleFirestoreError = (err: unknown, operationType: OperationType, path: string | null) => {
     const errInfo: FirestoreErrorInfo = {
       error: err instanceof Error ? err.message : String(err),
@@ -508,7 +530,7 @@ export default function App() {
     }, 3500);
   };
 
-  // Handle Firestore Request Submission with Multi-Photo Support (Max 3 Photos to Firebase Storage)
+  // Handle Firestore Request Submission with Hard Guard against Base64 Storage Leaks
   const handleCreateRequest = async (payload: {
     containerNumber: string;
     priority: PriorityLevel;
@@ -546,7 +568,13 @@ export default function App() {
           rawPhotos.map(async (img) => {
             // Compress client-side to save bandwidth, then upload to Firebase Storage
             const compressed = img.startsWith("data:image") ? await compressImage(img) : img;
-            return await uploadImageToStorage(compressed, newId, "damage");
+            const downloadUrl = await uploadImageToStorage(compressed, newId, "damage");
+            
+            // Hard Guard: Prevent Base64 from entering Firestore if Storage fails silently
+            if (downloadUrl.startsWith("data:image")) {
+              throw new Error("Critical Error: Image failed to upload to Firebase Storage Bucket.");
+            }
+            return downloadUrl;
           })
         );
       }
@@ -584,7 +612,7 @@ export default function App() {
     }
   };
 
-  // Handle status update with Multi-Photo Support (Max 3 Photos to Firebase Storage)
+  // Handle status update with Hard Guard against Base64 Storage Leaks
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -630,7 +658,13 @@ export default function App() {
         storedRepairPhotos = await Promise.all(
           rawRepairPhotos.map(async (img) => {
             const compressed = img.startsWith("data:image") ? await compressImage(img) : img;
-            return await uploadImageToStorage(compressed, id, "repair");
+            const downloadUrl = await uploadImageToStorage(compressed, id, "repair");
+            
+            // Hard Guard: Prevent Base64 from entering Firestore if Storage fails silently
+            if (downloadUrl.startsWith("data:image")) {
+              throw new Error("Critical Error: Image failed to upload to Firebase Storage Bucket.");
+            }
+            return downloadUrl;
           })
         );
       }
@@ -1610,7 +1644,7 @@ export default function App() {
                               >
                                 <td className="py-3.5 px-4 font-mono font-bold text-blue-600 group-hover:underline">
                                   {req.id}
-                                </td>
+                                 </td>
                                 <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
                                   {req.containerNumber}
                                 </td>
