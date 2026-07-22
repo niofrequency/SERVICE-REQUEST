@@ -48,6 +48,7 @@ export default function AdminProfile({
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
           <span>TIMIKA PORT INTAKE (PAPUA)</span>
         </span>
+
         <span className="text-blue-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
           <span>SURABAYA &amp; JAKARTA WORKSHOP SYSTEM</span>
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
@@ -124,7 +125,8 @@ export default function AdminProfile({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
-        <div className="xl:col-span-4 space-y-6 w-full">
+        {/* Full-width responsive container for TimikaForm in Admin view */}
+        <div className="xl:col-span-12 space-y-6 w-full">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
             <div className="border-b border-slate-100 pb-3">
               <div className="flex justify-between items-center">
@@ -157,7 +159,7 @@ export default function AdminProfile({
           </div>
         </div>
 
-        <div className="xl:col-span-8 space-y-6 w-full">
+        <div className="xl:col-span-12 space-y-6 w-full">
           <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
             <div>
               <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
