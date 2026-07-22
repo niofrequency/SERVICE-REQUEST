@@ -1316,7 +1316,19 @@ export default function App() {
                   />
                 )}
 
-                {/* 3. Admin Full Monitor (Split Screen Integration) */}
+                {/* 3. Jakarta View (Workshop Repairs) - Hooked to handlePrintRequest */}
+                {currentRole === LocationTeam.JAKARTA && (
+                 <JakartaDashboard
+                    requests={requests}
+                    onStatusUpdate={handleStatusUpdate}
+                    onSelectRequest={(req) => setSelectedRequest(req)}
+                    onPrint={handlePrintRequest}
+                    language={language}
+                    loggedInUser={loggedInUser}
+                  />
+                )}
+
+                {/* 4. Admin Full Monitor (Split Screen Integration) */}
                 {currentRole === "Admin" && (
                   <div className="space-y-6">
                     {/* Visual split bar banner */}
