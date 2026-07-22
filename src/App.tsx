@@ -33,6 +33,7 @@ import { locales } from "./locales.js";
 
 // Firebase Integration imports
 import { db, auth } from "./firebase.js";
+import { uploadImageToStorage } from "./utils/storage.js";
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -507,7 +508,7 @@ export default function App() {
     }, 3500);
   };
 
-  // Handle Firestore Request Submission with Multi-Photo Support (Up to 3 Photos)
+  // Handle Firestore Request Submission with Multi-Photo Support (Max 3 Photos to Firebase Storage)
   const handleCreateRequest = async (payload: {
     containerNumber: string;
     priority: PriorityLevel;
@@ -531,14 +532,23 @@ export default function App() {
       const targetLocation = payload.destinationLocation || LocationTeam.SURABAYA;
       const timestamp = new Date().toISOString();
 
-      let compressedPhotoUrls: string[] = [];
-      if (payload.photoUrls && payload.photoUrls.length > 0) {
-        compressedPhotoUrls = await Promise.all(
-          payload.photoUrls.map(async (url) => (url.startsWith("data:image") ? await compressImage(url) : url))
+      // Extract raw photos, fallback to photoUrl
+      let rawPhotos = payload.photoUrls && payload.photoUrls.length > 0 
+        ? payload.photoUrls 
+        : (payload.photoUrl ? [payload.photoUrl] : []);
+
+      // Enforce the maximum limit of 3 photos
+      rawPhotos = rawPhotos.slice(0, 3);
+
+      let storedPhotoUrls: string[] = [];
+      if (rawPhotos.length > 0) {
+        storedPhotoUrls = await Promise.all(
+          rawPhotos.map(async (img) => {
+            // Compress client-side to save bandwidth, then upload to Firebase Storage
+            const compressed = img.startsWith("data:image") ? await compressImage(img) : img;
+            return await uploadImageToStorage(compressed, newId, "damage");
+          })
         );
-      } else if (payload.photoUrl) {
-        const comp = payload.photoUrl.startsWith("data:image") ? await compressImage(payload.photoUrl) : payload.photoUrl;
-        compressedPhotoUrls = [comp];
       }
 
       const newRequest: ServiceRequest = {
@@ -547,8 +557,8 @@ export default function App() {
         priority: payload.priority,
         category: payload.category,
         description: payload.description,
-        photoUrl: compressedPhotoUrls[0] || null,
-        photoUrls: compressedPhotoUrls,
+        photoUrl: storedPhotoUrls[0] || null,
+        photoUrls: storedPhotoUrls,
         reporterName: payload.reporterName,
         timestamp,
         status: RequestStatus.WAITING,
@@ -563,7 +573,7 @@ export default function App() {
             operator: payload.reporterName,
             location: LocationTeam.TIMIKA,
             timestamp,
-            notes: `Initial service request submitted with ${compressedPhotoUrls.length} damage photo(s) in Timika, routed to ${targetLocation}.`
+            notes: `Initial service request submitted with ${storedPhotoUrls.length} damage photo(s) in Timika, routed to ${targetLocation}.`
           }
         ]
       };
@@ -574,7 +584,7 @@ export default function App() {
     }
   };
 
-  // Handle status update with Multi-Photo Support (Up to 3 Photos)
+  // Handle status update with Multi-Photo Support (Max 3 Photos to Firebase Storage)
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -607,14 +617,22 @@ export default function App() {
 
       const updatedRequest = { ...request };
 
-      let compressedRepairPhotos: string[] = [];
-      if (updatePayload.repairPhotoUrls && updatePayload.repairPhotoUrls.length > 0) {
-        compressedRepairPhotos = await Promise.all(
-          updatePayload.repairPhotoUrls.map(async (url) => (url.startsWith("data:image") ? await compressImage(url) : url))
+      // Extract raw repair photos, fallback to repairPhotoUrl
+      let rawRepairPhotos = updatePayload.repairPhotoUrls && updatePayload.repairPhotoUrls.length > 0 
+        ? updatePayload.repairPhotoUrls 
+        : (updatePayload.repairPhotoUrl ? [updatePayload.repairPhotoUrl] : []);
+
+      // Enforce the maximum limit of 3 photos
+      rawRepairPhotos = rawRepairPhotos.slice(0, 3);
+
+      let storedRepairPhotos: string[] = [];
+      if (rawRepairPhotos.length > 0) {
+        storedRepairPhotos = await Promise.all(
+          rawRepairPhotos.map(async (img) => {
+            const compressed = img.startsWith("data:image") ? await compressImage(img) : img;
+            return await uploadImageToStorage(compressed, id, "repair");
+          })
         );
-      } else if (updatePayload.repairPhotoUrl) {
-        const comp = updatePayload.repairPhotoUrl.startsWith("data:image") ? await compressImage(updatePayload.repairPhotoUrl) : updatePayload.repairPhotoUrl;
-        compressedRepairPhotos = [comp];
       }
 
       if (updatePayload.status === RequestStatus.DONE) {
@@ -622,9 +640,9 @@ export default function App() {
           throw new Error("Resolution notes are required to complete a request.");
         }
         updatedRequest.resolutionNotes = updatePayload.resolutionNotes;
-        if (compressedRepairPhotos.length > 0) {
-          updatedRequest.repairPhotoUrls = compressedRepairPhotos;
-          updatedRequest.repairPhotoUrl = compressedRepairPhotos[0];
+        if (storedRepairPhotos.length > 0) {
+          updatedRequest.repairPhotoUrls = storedRepairPhotos;
+          updatedRequest.repairPhotoUrl = storedRepairPhotos[0];
         }
       } else if (updatePayload.status === RequestStatus.CANCELLED) {
         if (!updatePayload.cancellationReason) {
