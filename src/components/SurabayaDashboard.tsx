@@ -283,7 +283,7 @@ export default function SurabayaDashboard({
         </div>
       )}
 
-      {/* Interactive Flow-Chart Pipeline Layout (Single Horizontal Row) */}
+      {/* Interactive Flow-Chart Pipeline Layout (Fixed Single Horizontal Row) */}
       <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
