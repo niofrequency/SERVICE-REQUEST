@@ -610,7 +610,7 @@ export default function App() {
     }
   };
 
-  // Handle status update with Hard Guard against Base64 Storage Leaks
+  // Handle status update with Hard Guard against Base64 Storage Leaks and Admin Revert
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -630,13 +630,15 @@ export default function App() {
 
       const oldStatus = request.status;
       const timestamp = new Date().toISOString();
+      const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
 
       if (updatePayload.location === LocationTeam.TIMIKA) {
         if (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE) {
           throw new Error("Unauthorized: Timika port inspectors cannot modify or advance workshop repair jobs.");
         }
       } else if (updatePayload.location === LocationTeam.SURABAYA || updatePayload.location === LocationTeam.JAKARTA) {
-        if (oldStatus === RequestStatus.DONE && updatePayload.status !== RequestStatus.DONE) {
+        // Allow Admin to bypass completed lock for reverting statuses
+        if (!isAdmin && oldStatus === RequestStatus.DONE && updatePayload.status !== RequestStatus.DONE) {
           throw new Error("Unauthorized: Completed jobs are certified and locked in the ledger.");
         }
       }
@@ -1264,39 +1266,17 @@ export default function App() {
 
             {/* Always show In Progress for Timika and Admin as well */}
             {(currentRole === LocationTeam.TIMIKA || currentRole === "Admin") && (
-              <>
-                <button
-                  onClick={() => setCurrentTab("awaiting")}
-                  className={`flex items-center justify-center space-x-1.5 px-3 py-2.5 sm:px-3.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                    currentTab === "awaiting" ? "bg-amber-600 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                  <span>Awaiting ({waitingTickets})</span>
-                </button>
-
-                <button
-                  onClick={() => setCurrentTab("in-progress")}
-                  className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                    currentTab === "in-progress"
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-blue-400" />
-                  <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({activeRepairs})</span>
-                </button>
-
-                <button
-                  onClick={() => setCurrentTab("completed")}
-                  className={`flex items-center justify-center space-x-1.5 px-3 py-2.5 sm:px-3.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                    currentTab === "completed" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                  <span>Completed ({completedJobs})</span>
-                </button>
-              </>
+              <button
+                onClick={() => setCurrentTab("in-progress")}
+                className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                  currentTab === "in-progress"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({activeRepairs})</span>
+              </button>
             )}
 
             <button
@@ -1378,37 +1358,15 @@ export default function App() {
                 )}
 
                 {(currentRole === LocationTeam.TIMIKA || currentRole === "Admin") && (
-                  <>
-                    <button
-                      onClick={() => { setCurrentTab("awaiting"); setIsMobileMenuOpen(false); }}
-                      className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
-                        currentTab === "awaiting" ? "bg-amber-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800"
-                      }`}
-                    >
-                      <Clock className="h-4 w-4 shrink-0 text-amber-400" />
-                      <span>Awaiting ({waitingTickets})</span>
-                    </button>
-
-                    <button
-                      onClick={() => { setCurrentTab("in-progress"); setIsMobileMenuOpen(false); }}
-                      className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
-                        currentTab === "in-progress" ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800"
-                      }`}
-                    >
-                      <BarChart3 className="h-4 w-4 shrink-0 text-blue-400" />
-                      <span>In Progress ({activeRepairs})</span>
-                    </button>
-
-                    <button
-                      onClick={() => { setCurrentTab("completed"); setIsMobileMenuOpen(false); }}
-                      className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
-                        currentTab === "completed" ? "bg-emerald-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800"
-                      }`}
-                    >
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                      <span>Completed ({completedJobs})</span>
-                    </button>
-                  </>
+                  <button
+                    onClick={() => { setCurrentTab("in-progress"); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
+                      currentTab === "in-progress" ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800"
+                    }`}
+                  >
+                    <Clock className="h-4 w-4 shrink-0 text-blue-400" />
+                    <span>In Progress ({activeRepairs})</span>
+                  </button>
                 )}
 
                 <button
