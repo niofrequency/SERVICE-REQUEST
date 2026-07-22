@@ -248,7 +248,7 @@ export default function Header({
           {loggedInUser?.email === "mpigome44@gmail.com" ? (
             <button
               onClick={() => {
-                const roles: Array<LocationTeam | "Admin"> = [LocationTeam.TIMIKA, LocationTeam.SURABAYA, "Admin"];
+                const roles: Array<LocationTeam | "Admin"> = [LocationTeam.TIMIKA, LocationTeam.SURABAYA, LocationTeam.JAKARTA, "Admin"];
                 const currentIndex = roles.indexOf(currentRole);
                 const nextIndex = (currentIndex + 1) % roles.length;
                 onRoleChange(roles[nextIndex]);
