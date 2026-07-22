@@ -438,7 +438,7 @@ export default function TimikaForm({
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 animate-fade-in w-full items-start">
+    <div className="flex flex-col lg:flex-row gap-6 animate-fade-in w-full items-start">
 
       {/* Form & Photo Attachment Column */}
       <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative w-full">
@@ -663,7 +663,7 @@ export default function TimikaForm({
       </div>
 
       {/* Sidebar Stretched Rectangular Summary Bubbles Column */}
-      <div className="w-full xl:w-[450px] space-y-4 shrink-0">
+      <div className="w-full lg:w-[420px] space-y-4 shrink-0">
         
         {/* SECTION A: IN PROGRESS & WAITING SUMMARY BUBBLE (Stretched Rectangular) */}
         <div 
