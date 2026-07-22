@@ -283,7 +283,7 @@ export default function SurabayaDashboard({
         </div>
       )}
 
-      {/* Interactive Flow-Chart Pipeline Scoreboard */}
+      {/* Interactive Flow-Chart Pipeline Layout (Single Horizontal Row) */}
       <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -300,12 +300,12 @@ export default function SurabayaDashboard({
           )}
         </div>
 
-        {/* Flowchart Boxes with Arrow Connectors */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center pt-1">
+        {/* Single Horizontal Row Flex Layout */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
           {/* Box 1: Awaiting Repair */}
           <div
             onClick={() => setQueueFilter(queueFilter === "awaiting" ? "all" : "awaiting")}
-            className={`p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between md:col-span-2 ${
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
               queueFilter === "awaiting" ? "bg-amber-50 border-amber-500 shadow-md" : "bg-white border-slate-300 hover:border-amber-500 shadow-sm"
             }`}
           >
@@ -320,7 +320,7 @@ export default function SurabayaDashboard({
           </div>
 
           {/* Arrow 1 */}
-          <div className="hidden md:flex justify-center text-slate-400">
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
               <ArrowRight className="h-4 w-4 animate-pulse text-blue-600" />
             </div>
@@ -329,7 +329,7 @@ export default function SurabayaDashboard({
           {/* Box 2: In Progress */}
           <div
             onClick={() => setQueueFilter(queueFilter === "in-progress" ? "all" : "in-progress")}
-            className={`p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between md:col-span-2 ${
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
               queueFilter === "in-progress" ? "bg-blue-50 border-blue-500 shadow-md" : "bg-white border-slate-300 hover:border-blue-500 shadow-sm"
             }`}
           >
@@ -342,19 +342,18 @@ export default function SurabayaDashboard({
               {inProgressCount}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center pt-1">
-          <div className="hidden md:block md:col-span-2"></div>
-          <div className="hidden md:flex justify-center text-slate-400">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner rotate-90 md:rotate-0">
+          {/* Arrow 2 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
               <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
             </div>
           </div>
+
           {/* Box 3: Completed */}
           <div
             onClick={() => setQueueFilter(queueFilter === "completed" ? "all" : "completed")}
-            className={`p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between md:col-span-2 ${
+            className={`flex-1 w-full p-4 rounded-xl border-2 transition-all cursor-pointer group flex items-center justify-between ${
               queueFilter === "completed" ? "bg-emerald-50 border-emerald-500 shadow-md" : "bg-white border-slate-300 hover:border-emerald-500 shadow-sm"
             }`}
           >
