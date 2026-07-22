@@ -1,23 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase"; // Adjust path if needed
-import {
-  ServiceRequest,
-  RequestStatus,
-  PriorityLevel,
-  LocationTeam,
-  IssueCategory
+import { 
+  ServiceRequest, 
+  RequestStatus, 
+  PriorityLevel, 
+  LocationTeam, 
+  IssueCategory 
 } from "../types.js";
-import {
-  Wrench,
-  Play,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  User,
-  Filter,
-  Camera,
-  ClipboardCheck,
+import { 
+  Wrench, 
+  Play, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  User, 
+  Filter, 
+  Camera, 
+  ClipboardCheck, 
   FileText,
   Edit2,
   Trash2,
@@ -31,7 +31,7 @@ import { locales } from "../locales.js";
 interface JakartaDashboardProps {
   requests: ServiceRequest[];
   onStatusUpdate: (
-    id: string,
+    id: string, 
     updatePayload: {
       status: RequestStatus;
       operator: string;
@@ -43,7 +43,7 @@ interface JakartaDashboardProps {
     }
   ) => void;
   onSelectRequest: (request: ServiceRequest) => void;
-  onPrint?: (request: ServiceRequest) => void; // Added onPrint prop to connect to App.tsx print engine
+  onPrint?: (request: ServiceRequest) => void; 
   language: "ENG" | "IND";
   loggedInUser: { name: string; location: LocationTeam; email?: string } | null;
 }
@@ -61,7 +61,7 @@ export default function JakartaDashboard({
   // Filters & Sorting
   const [filterCategory, setFilterCategory] = useState<string>("All");
   const [filterPriority, setFilterPriority] = useState<string>("All");
-  const [operatorName, setOperatorName] = useState("Bambang Santoso");
+  const [operatorName, setOperatorName] = useState("Dimas Prasetyo");
 
   // Interaction Modals/States
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
@@ -264,7 +264,7 @@ export default function JakartaDashboard({
           </div>
           <div>
             <span className="font-extrabold uppercase tracking-wider block text-[10px] text-amber-950">{t.unauthorizedTitle}</span>
-            <span className="text-amber-800 mt-0.5 block">{t.restrictedSurabaya} {t.unauthorizedDesc}</span>
+            <span className="text-amber-800 mt-0.5 block">{t.unauthorizedDesc}</span>
           </div>
         </div>
       )}
@@ -272,15 +272,15 @@ export default function JakartaDashboard({
       {/* Workshop Controls & Filters */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
         <div className="flex items-center space-x-3.5">
-          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+          <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl shrink-0">
             <Wrench className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
-              {t.surabayaTitle}
+              {language === "ENG" ? "Jakarta Repair Workshop Control" : "Kontrol Bengkel Perbaikan Jakarta"}
             </h2>
             <p className="text-xs text-slate-400">
-              {t.surabayaSubtitle}
+              {language === "ENG" ? "Review and action container intake tickets arriving in real-time from Timika." : "Tinjau dan tindak lanjuti tiket masuk kontainer secara real-time dari Timika."}
             </p>
           </div>
         </div>
@@ -327,22 +327,21 @@ export default function JakartaDashboard({
             <span className="text-slate-500 font-mono font-bold uppercase text-[9px] shrink-0">{t.operatorLabel}:</span>
             <select
               value={operatorName}
-              disabled={isAuthorized} // Freeze to active user if they are the authorized operator
+              disabled={isAuthorized} 
               onChange={(e) => setOperatorName(e.target.value)}
               className={`font-extrabold bg-transparent focus:outline-none text-slate-700 font-mono text-xs w-full ${isAuthorized ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
-              {loggedInUser && !["Bambang Santoso", "Hendra Wijaya", "Syarifuddin"].includes(loggedInUser.name) && (
+              {loggedInUser && !["Dimas Prasetyo", "Siti Nurhayati"].includes(loggedInUser.name) && (
                 <option value={loggedInUser.name}>{loggedInUser.name}</option>
               )}
-              <option value="Bambang Santoso">Bambang Santoso</option>
-              <option value="Hendra Wijaya">Hendra Wijaya</option>
-              <option value="Syarifuddin">Syarifuddin</option>
+              <option value="Dimas Prasetyo">Dimas Prasetyo</option>
+              <option value="Siti Nurhayati">Siti Nurhayati</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Kanban Board Grid - Now fully fluid and responsive */}
+      {/* Kanban Board Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 items-start w-full">
         {columns.map((col) => {
           const colRequests = getRequestsByStatus(col.status);
@@ -381,12 +380,12 @@ export default function JakartaDashboard({
                           if (editingId !== req.id) onSelectRequest(req);
                         }}
                         className={`bg-white rounded-xl border transition-all p-4 relative space-y-3 group hover:-translate-y-0.5 cursor-pointer max-w-full ${
-                          locked ? "border-slate-200/50 bg-slate-50/40 opacity-90" : "border-slate-200/80 hover:border-blue-400 hover:shadow-md"
+                          locked ? "border-slate-200/50 bg-slate-50/40 opacity-90" : "border-slate-200/80 hover:border-purple-400 hover:shadow-md"
                         }`}
                       >
                         {/* Header Details */}
                         <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono">
-                          <span className="font-bold text-slate-950 group-hover:text-blue-600 underline decoration-dotted">
+                          <span className="font-bold text-slate-950 group-hover:text-purple-600 underline decoration-dotted">
                             {req.id}
                           </span>
                           <span className="text-slate-400 text-[9px]">
@@ -447,7 +446,7 @@ export default function JakartaDashboard({
                             <textarea 
                               value={editDescription}
                               onChange={(e) => setEditDescription(e.target.value)}
-                              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-blue-500 resize-none font-sans"
+                              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-purple-500 resize-none font-sans"
                               rows={3}
                             />
                             
@@ -466,7 +465,7 @@ export default function JakartaDashboard({
                                 type="button"
                                 disabled={isUpdating}
                                 onClick={(e) => handleUpdate(e, req.id)}
-                                className="px-2.5 py-1 text-[10px] text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-1 shadow-sm disabled:opacity-50"
+                                className="px-2.5 py-1 text-[10px] text-white bg-purple-600 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1 shadow-sm disabled:opacity-50"
                               >
                                 <Save className="h-3 w-3" /> {isUpdating ? "Saving..." : "Save"}
                               </button>
@@ -487,7 +486,7 @@ export default function JakartaDashboard({
                                 type="button"
                                 onClick={(e) => handleStartRepair(e, req.id)}
                                 disabled={!isAuthorized}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider"
+                                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                               >
                                 <Play className="h-3 w-3 fill-current shrink-0" />
                                 <span>{t.acceptRepairBtn}</span>
@@ -501,7 +500,7 @@ export default function JakartaDashboard({
                                     type="button"
                                     onClick={(e) => handleOpenActionDialog(e, req.id, "DONE")}
                                     disabled={!isAuthorized}
-                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px]"
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                                   >
                                     <CheckCircle className="h-3 w-3 shrink-0" />
                                     <span>{t.completeBtn}</span>
@@ -511,7 +510,7 @@ export default function JakartaDashboard({
                                       type="button"
                                       onClick={(e) => handleOpenActionDialog(e, req.id, "CANCELLED")}
                                       disabled={!isAuthorized}
-                                      className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-lg"
+                                      className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
                                     >
                                       <XCircle className="h-3 w-3 shrink-0" />
                                       <span>{t.cancelBtn}</span>
@@ -526,7 +525,7 @@ export default function JakartaDashboard({
                                       e.stopPropagation();
                                       onPrint(req);
                                     }}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors"
+                                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
                                   >
                                     <Printer className="h-3 w-3" />
                                     <span>PRINT (PDF)</span>
@@ -550,7 +549,7 @@ export default function JakartaDashboard({
                                       e.stopPropagation();
                                       onPrint(req);
                                     }}
-                                    className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors"
+                                    className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
                                   >
                                     <Printer className="h-3 w-3" />
                                     <span>PRINT CERTIFICATE</span>
@@ -576,14 +575,14 @@ export default function JakartaDashboard({
                                   e.stopPropagation();
                                   onSelectRequest(req);
                                 }}
-                                className="text-slate-500 hover:text-blue-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold shrink-0"
+                                className="text-slate-500 hover:text-purple-600 flex items-center space-x-1 hover:underline cursor-pointer font-bold shrink-0"
                               >
                                 <FileText className="h-3.5 w-3.5" />
                                 <span>{t.auditTrailBtn} ({req.auditLogs.length})</span>
                               </button>
                             </div>
 
-                            {/* Edit & Delete Action Buttons: LOCKED FOR COMPLETED/CANCELLED, BUT WITH ADMIN DELETE OVERRIDE */}
+                            {/* Edit & Delete Action Buttons */}
                             {isAuthorized && (
                               <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
                                 {!locked ? (
@@ -591,7 +590,7 @@ export default function JakartaDashboard({
                                     <button 
                                       type="button"
                                       onClick={(e) => startEdit(e, req)}
-                                      className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-blue-50 transition-colors"
+                                      className="text-[11px] text-purple-600 hover:text-purple-800 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-purple-50 transition-colors"
                                     >
                                       <Edit2 className="h-3 w-3" /> Edit
                                     </button>
@@ -702,7 +701,7 @@ export default function JakartaDashboard({
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="text-xs text-blue-600 font-extrabold flex items-center justify-center space-x-1.5 mx-auto cursor-pointer"
+                          className="text-xs text-purple-600 font-extrabold flex items-center justify-center space-x-1.5 mx-auto cursor-pointer"
                         >
                           <Camera className="h-4.5 w-4.5" />
                           <span>{t.attachProofBtn}</span>
@@ -729,7 +728,7 @@ export default function JakartaDashboard({
                       rows={3}
                       value={resolutionNotes}
                       onChange={(e) => setResolutionNotes(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs h-24 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-colors"
+                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs h-24 resize-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 outline-none transition-all"
                       required
                     />
                   </div>
@@ -745,7 +744,7 @@ export default function JakartaDashboard({
                     rows={3}
                     value={cancellationReason}
                     onChange={(e) => setCancellationReason(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs h-24 resize-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 outline-none transition-colors"
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs h-24 resize-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 outline-none transition-all"
                     required
                   />
                 </div>
@@ -762,7 +761,7 @@ export default function JakartaDashboard({
                 <button
                   type="button"
                   onClick={handleCloseActionDialog}
-                  className="w-1/2 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  className="w-1/2 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer text-center"
                 >
                   {t.closeBtn}
                 </button>
