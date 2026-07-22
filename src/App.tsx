@@ -122,6 +122,7 @@ export default function App() {
 
   const timikaTechs = ["Anis Matta", "Yoppy Kogoya", "Eko Tabuni", "Custom Name"];
   const surabayaTechs = ["Bambang Santoso", "Hendra Wijaya", "Syarifuddin", "Custom Name"];
+  const jakartaTechs = ["Dimas Prasetyo", "Siti Nurhayati", "Custom Name"];
 
   // Error logging function required by firebase-integration skill
   const handleFirestoreError = (err: unknown, operationType: OperationType, path: string | null) => {
