@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ServiceRequest, RequestStatus, LocationTeam, PriorityLevel, IssueCategory } from "./types.js";
 import Header from "./components/Header.js";
 import TimikaForm from "./components/TimikaForm.js";
+import JakartaDashboard from "./components/JakartaDashboard.js";
 import SurabayaDashboard from "./components/SurabayaDashboard.js";
 import AuditTrailModal from "./components/AuditTrailModal.js";
 import { 
