@@ -27,6 +27,7 @@ export enum RequestStatus {
 export enum LocationTeam {
   TIMIKA = "Timika",
   SURABAYA = "Surabaya",
+  JAKARTA = "Jakarta",
 }
 
 export interface AuditLog {
