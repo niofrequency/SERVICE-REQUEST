@@ -703,18 +703,59 @@ export default function JakartaDashboard({
                                     </button>
                                   </>
                                 ) : (
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
-                                      <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked" : "Terkunci"}
-                                    </span>
-                                    {isAdmin && (
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => handleDelete(e, req.id)}
-                                        className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-                                      >
-                                        <Trash2 className="h-3 w-3" /> Admin Delete
-                                      </button>
+                                  <div className="flex flex-col w-full gap-2">
+                                    <div className="flex items-center justify-between w-full">
+                                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 italic">
+                                        <Lock className="h-3 w-3" /> {language === "ENG" ? "Locked" : "Terkunci"}
+                                      </span>
+                                      {isAdmin && (
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => handleDelete(e, req.id)}
+                                          className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 py-0.5 px-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 className="h-3 w-3" /> Admin Delete
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* Admin Revert controls for Completed or Cancelled units */}
+                                    {isAdmin && col.status === RequestStatus.DONE && (
+                                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                                        <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Revert:</span>
+                                        <div className="flex gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onStatusUpdate(req.id, {
+                                                status: RequestStatus.WAITING,
+                                                operator: operatorName,
+                                                location: LocationTeam.JAKARTA,
+                                                notes: "Admin reverted completed unit back to Awaiting Repair."
+                                              });
+                                            }}
+                                            className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded text-[9px] font-bold uppercase transition cursor-pointer"
+                                          >
+                                            To Awaiting
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onStatusUpdate(req.id, {
+                                                status: RequestStatus.IN_PROGRESS,
+                                                operator: operatorName,
+                                                location: LocationTeam.JAKARTA,
+                                                notes: "Admin reverted completed unit back to In Progress."
+                                              });
+                                            }}
+                                            className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-[9px] font-bold uppercase transition cursor-pointer"
+                                          >
+                                            To In Progress
+                                          </button>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 )}
