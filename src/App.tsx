@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { ServiceRequest, RequestStatus, LocationTeam, PriorityLevel, IssueCategory } from "./types.js";
 import Header from "./components/Header.js";
@@ -176,7 +181,6 @@ export default function App() {
           return;
         }
 
-        // 1. Instant visual feedback: load existing localStorage cache if available
         const savedUserStr = localStorage.getItem("user");
         let loadedFromCache = false;
         if (savedUserStr) {
@@ -196,7 +200,6 @@ export default function App() {
           }
         }
 
-        // 2. Fallback default profile if cache is not available, so we never block or get stuck
         if (!loadedFromCache) {
           const isAdmin = user.email === "mpigome44@gmail.com";
           const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
@@ -215,10 +218,8 @@ export default function App() {
           }
         }
 
-        // Unblock UI immediately so the portal opens right away!
         setAuthChecking(false);
 
-        // 3. Fetch actual profile in the background
         try {
           const userDocRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(userDocRef);
@@ -238,7 +239,6 @@ export default function App() {
               setCurrentRole(profile.location as LocationTeam);
             }
           } else {
-            // Profile doesn't exist yet (e.g., first-time Google/Email sign-up completed in background)
             const isAdmin = user.email === "mpigome44@gmail.com";
             const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
             const defaultLoc = LocationTeam.TIMIKA;
@@ -292,8 +292,6 @@ export default function App() {
     setIsLoading(true);
     const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
     
-    // Safety timeout: if Firestore takes too long (e.g., 3.5 seconds) to return the initial snapshot,
-    // unblock the UI so the user can operate in offline fallback or cached mode.
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
     }, 3500);
@@ -347,7 +345,6 @@ export default function App() {
                             (passwordInput === "admintim" || passwordInput === "admtim");
 
       if (isTargetAdmin && (err.code === "auth/user-not-found" || err.message?.includes("user-not-found") || err.code === "auth/invalid-credential" || err.message?.includes("invalid-credential"))) {
-        // Auto register admin if not found or password mismatch on first run
         try {
           isRegisteringRef.current = true;
           const userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim().toLowerCase(), passwordInput);
@@ -378,7 +375,6 @@ export default function App() {
     }
   };
 
-  // Handle Firebase Email/Password Registration (Sign Up with signature)
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -394,11 +390,9 @@ export default function App() {
     const fullName = `${signupFirstName.trim()} ${signupLastName.trim()}`;
     try {
       isRegisteringRef.current = true;
-      // 1. Create the Auth User
       const userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       const user = userCredential.user;
 
-      // 2. Build the User Session profile state
       const newUser = {
         name: fullName,
         firstName: signupFirstName.trim(),
@@ -408,7 +402,6 @@ export default function App() {
         signature: signatureInput.trim()
       };
 
-      // 3. Immediately set state and localStorage so the user can access the portal instantly
       setLoggedInUser(newUser);
       localStorage.setItem("user", JSON.stringify(newUser));
       if (emailInput.trim().toLowerCase() === "mpigome44@gmail.com") {
@@ -417,11 +410,9 @@ export default function App() {
         setCurrentRole(signupLocation);
       }
 
-      // Unblock auth gate state
       isRegisteringRef.current = false;
       setAuthChecking(false);
 
-      // 4. Create the User Profile doc in Firestore in the background
       setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: fullName,
@@ -441,7 +432,6 @@ export default function App() {
     }
   };
 
-  // Handle Firebase Google Sign In
   const handleGoogleSignIn = async () => {
     setAuthError(null);
     setAuthSuccess(null);
@@ -454,7 +444,6 @@ export default function App() {
     }
   };
 
-  // Handle Logout from Firebase and local profile
   const handleLogOut = async () => {
     try {
       await signOut(auth);
@@ -466,23 +455,19 @@ export default function App() {
     setCurrentRole("Admin");
   };
 
-  // Toggle Language
   const toggleLanguage = () => {
     const next = language === "ENG" ? "IND" : "ENG";
     setLanguage(next);
     localStorage.setItem("lang", next);
   };
 
-  // Direct Mobile Photo Upload Trigger (No AI Analysis)
   const handleMobileScanImage = async (base64Data: string) => {
     setIsMobileScanning(true);
     setMobileScanError(null);
     
-    // Compress image to prevent Firestore 1MB limits
     const compressedPhoto = await compressImage(base64Data);
     
     if (currentRole === LocationTeam.SURABAYA || currentRole === LocationTeam.JAKARTA) {
-      // In Surabaya or Jakarta mode: Attach completion photo to the currently selected active ticket
       if (selectedRequest && (selectedRequest.status === RequestStatus.WAITING || selectedRequest.status === RequestStatus.IN_PROGRESS)) {
         setMobileScanStatus(language === "ENG" ? `Attaching completion photo to ${selectedRequest.id}...` : `Melampirkan foto selesai ke ${selectedRequest.id}...`);
         
@@ -492,7 +477,8 @@ export default function App() {
           location: currentRole as LocationTeam,
           notes: "Repair completed with direct mobile photo upload.",
           resolutionNotes: "Structural repair / maintenance completed and verified via mobile photo.",
-          repairPhotoUrl: compressedPhoto
+          repairPhotoUrl: compressedPhoto,
+          repairPhotoUrls: [compressedPhoto]
         });
         
         setMobileScanStatus(language === "ENG" ? `Success! Photo attached and ${selectedRequest.id} marked as DONE.` : `Sukses! Foto terlampir & ${selectedRequest.id} selesai.`);
@@ -504,7 +490,6 @@ export default function App() {
         );
       }
     } else {
-      // In Timika / Admin mode: Instantly attach to the intake form
       setPrefilledPhoto(compressedPhoto);
       setMobileScanStatus(language === "ENG" ? "Photo Attached! Please fill in the container details below." : "Foto Terlampir! Silakan lengkapi detail kontainer di bawah.");
       
@@ -522,13 +507,14 @@ export default function App() {
     }, 3500);
   };
 
-  // Handle Firestore Request Submission (passed to TimikaForm)
+  // Handle Firestore Request Submission with Multi-Photo Support (Up to 3 Photos)
   const handleCreateRequest = async (payload: {
     containerNumber: string;
     priority: PriorityLevel;
     category: IssueCategory;
     description: string;
     photoUrl: string | null;
+    photoUrls?: string[];
     reporterName: string;
     destinationLocation?: LocationTeam;
   }) => {
@@ -545,10 +531,14 @@ export default function App() {
       const targetLocation = payload.destinationLocation || LocationTeam.SURABAYA;
       const timestamp = new Date().toISOString();
 
-      // Compress photo if provided to ensure it stays below 1 MB
-      let finalPhotoUrl = payload.photoUrl;
-      if (finalPhotoUrl && finalPhotoUrl.startsWith("data:image")) {
-        finalPhotoUrl = await compressImage(finalPhotoUrl);
+      let compressedPhotoUrls: string[] = [];
+      if (payload.photoUrls && payload.photoUrls.length > 0) {
+        compressedPhotoUrls = await Promise.all(
+          payload.photoUrls.map(async (url) => (url.startsWith("data:image") ? await compressImage(url) : url))
+        );
+      } else if (payload.photoUrl) {
+        const comp = payload.photoUrl.startsWith("data:image") ? await compressImage(payload.photoUrl) : payload.photoUrl;
+        compressedPhotoUrls = [comp];
       }
 
       const newRequest: ServiceRequest = {
@@ -557,11 +547,12 @@ export default function App() {
         priority: payload.priority,
         category: payload.category,
         description: payload.description,
-        photoUrl: finalPhotoUrl,
+        photoUrl: compressedPhotoUrls[0] || null,
+        photoUrls: compressedPhotoUrls,
         reporterName: payload.reporterName,
         timestamp,
         status: RequestStatus.WAITING,
-        location: targetLocation, // Routes specifically to Surabaya or Jakarta
+        location: targetLocation,
         updatedAt: timestamp,
         auditLogs: [
           {
@@ -572,7 +563,7 @@ export default function App() {
             operator: payload.reporterName,
             location: LocationTeam.TIMIKA,
             timestamp,
-            notes: `Initial service request submitted by field technician in Timika, routed to ${targetLocation}.`
+            notes: `Initial service request submitted with ${compressedPhotoUrls.length} damage photo(s) in Timika, routed to ${targetLocation}.`
           }
         ]
       };
@@ -583,7 +574,7 @@ export default function App() {
     }
   };
 
-  // Handle status update (Commenced by Surabaya/Jakarta workshop or cancelled)
+  // Handle status update with Multi-Photo Support (Up to 3 Photos)
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -592,6 +583,7 @@ export default function App() {
       location: LocationTeam;
       notes?: string;
       repairPhotoUrl?: string;
+      repairPhotoUrls?: string[];
       resolutionNotes?: string;
       cancellationReason?: string;
     }
@@ -603,7 +595,6 @@ export default function App() {
       const oldStatus = request.status;
       const timestamp = new Date().toISOString();
 
-      // Enforce strict geographical and role permissions
       if (updatePayload.location === LocationTeam.TIMIKA) {
         if (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE) {
           throw new Error("Unauthorized: Timika port inspectors cannot modify or advance workshop repair jobs.");
@@ -616,20 +607,24 @@ export default function App() {
 
       const updatedRequest = { ...request };
 
-      // Compress repair photo if provided
-      let finalRepairPhoto = updatePayload.repairPhotoUrl;
-      if (finalRepairPhoto && finalRepairPhoto.startsWith("data:image")) {
-        finalRepairPhoto = await compressImage(finalRepairPhoto);
+      let compressedRepairPhotos: string[] = [];
+      if (updatePayload.repairPhotoUrls && updatePayload.repairPhotoUrls.length > 0) {
+        compressedRepairPhotos = await Promise.all(
+          updatePayload.repairPhotoUrls.map(async (url) => (url.startsWith("data:image") ? await compressImage(url) : url))
+        );
+      } else if (updatePayload.repairPhotoUrl) {
+        const comp = updatePayload.repairPhotoUrl.startsWith("data:image") ? await compressImage(updatePayload.repairPhotoUrl) : updatePayload.repairPhotoUrl;
+        compressedRepairPhotos = [comp];
       }
 
-      // Specific validation based on state transitions
       if (updatePayload.status === RequestStatus.DONE) {
         if (!updatePayload.resolutionNotes) {
           throw new Error("Resolution notes are required to complete a request.");
         }
         updatedRequest.resolutionNotes = updatePayload.resolutionNotes;
-        if (finalRepairPhoto) {
-          updatedRequest.repairPhotoUrl = finalRepairPhoto;
+        if (compressedRepairPhotos.length > 0) {
+          updatedRequest.repairPhotoUrls = compressedRepairPhotos;
+          updatedRequest.repairPhotoUrl = compressedRepairPhotos[0];
         }
       } else if (updatePayload.status === RequestStatus.CANCELLED) {
         if (!updatePayload.cancellationReason) {
@@ -638,11 +633,9 @@ export default function App() {
         updatedRequest.cancellationReason = updatePayload.cancellationReason;
       }
 
-      // Update main model
       updatedRequest.status = updatePayload.status;
       updatedRequest.updatedAt = timestamp;
 
-      // Append Audit Log
       const auditLog = {
         id: `LOG-${Date.now()}`,
         requestId: id,
@@ -662,19 +655,32 @@ export default function App() {
     }
   };
 
-  // Interactive Edit & Delete Handlers for Admin Role
+  // Interactive Delete Handler (Restricted to Timika / Admin)
   const handleDeleteRequest = async (id: string) => {
+    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+    if (!isTimikaUser) {
+      alert("Unauthorized: Only Timika personnel and Admin can delete service requests.");
+      return;
+    }
+
     if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
       try {
         await deleteDoc(doc(db, "requests", id));
-        setSelectedRequest(null); // Closes modal instantly
+        setSelectedRequest(null);
       } catch (err: any) {
         alert(`Delete failed: ${err.message}`);
       }
     }
   };
 
+  // Interactive Update Handler (Restricted to Timika / Admin)
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
+    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+    if (!isTimikaUser) {
+      alert("Unauthorized: Only Timika personnel and Admin can edit active requests.");
+      return;
+    }
+
     try {
       const docRef = doc(db, "requests", id);
       const request = requests.find((r) => r.id === id);
@@ -696,10 +702,10 @@ export default function App() {
         requestId: id,
         fromStatus: request.status,
         toStatus: updatedFields.status || request.status,
-        operator: loggedInUser ? loggedInUser.name : "Admin",
-        location: loggedInUser ? loggedInUser.location : LocationTeam.SURABAYA,
+        operator: loggedInUser ? loggedInUser.name : "Timika Inspector",
+        location: LocationTeam.TIMIKA,
         timestamp,
-        notes: `Admin manually updated details: ${changes}.`
+        notes: `Timika staff updated details: ${changes}.`
       };
 
       updated.auditLogs = [...updated.auditLogs, auditLog];
@@ -714,7 +720,6 @@ export default function App() {
   // Printing state
   const [printData, setPrintData] = useState<{ type: "unit" | "history"; data: ServiceRequest | ServiceRequest[] } | null>(null);
 
-  // Auto trigger browser print dialogue
   useEffect(() => {
     if (printData) {
       const timer = setTimeout(() => {
@@ -725,7 +730,6 @@ export default function App() {
     }
   }, [printData]);
 
-  // CSV Export handler
   const handleExportCSV = () => {
     const headers = [
       "Ticket ID",
@@ -781,20 +785,16 @@ export default function App() {
     setPrintData({ type: "unit", data: req });
   };
 
-  // Calculate high-level stats for PT. PANJASA-INTRADIN coordinators
   const totalTickets = requests.length;
   const waitingTickets = requests.filter((r) => r.status === RequestStatus.WAITING).length;
   const activeRepairs = requests.filter((r) => r.status === RequestStatus.IN_PROGRESS).length;
   const completedJobs = requests.filter((r) => r.status === RequestStatus.DONE).length;
   const cancelledJobs = requests.filter((r) => r.status === RequestStatus.CANCELLED).length;
 
-  // Filter historical records for History / Archives list view
   const historicalRequests = requests.filter((r) => {
     const isHistorical = r.status === RequestStatus.DONE || r.status === RequestStatus.CANCELLED;
     if (!isHistorical) return false;
-    
     if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
-    
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase().trim();
       const matchContainer = r.containerNumber?.toLowerCase().includes(q);
@@ -805,7 +805,6 @@ export default function App() {
     return true;
   });
 
-  // Auth Loading Screen
   if (authChecking) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-3 text-slate-300 font-sans">
@@ -817,11 +816,9 @@ export default function App() {
     );
   }
 
-  // Unified Secure login/signup portal (With Signature field)
   if (!firebaseUser || !loggedInUser) {
     return (
       <div className="min-h-screen bg-[#090d16] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-950/40 via-[#090d16] to-[#090d16] flex flex-col justify-between text-slate-100 font-sans relative overflow-hidden">
-        {/* Subtle decorative grid overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b12_1px,transparent_1px),linear-gradient(to_bottom,#1e293b12_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[350px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent blur-3xl pointer-events-none" />
 
@@ -888,7 +885,6 @@ export default function App() {
             )}
 
             {authMode === "signin" ? (
-              // Sign In Form
               <form onSubmit={handleEmailSignIn} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-mono uppercase tracking-wider font-bold text-slate-400">
@@ -940,7 +936,6 @@ export default function App() {
                 </div>
               </form>
             ) : (
-              // Sign Up Form (Includes operator name, branch selection, and signature)
               <form onSubmit={handleEmailSignUp} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
