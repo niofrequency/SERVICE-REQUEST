@@ -739,14 +739,20 @@ export default function App() {
       if (!request) return;
 
       const timestamp = new Date().toISOString();
+      
+      // Filter out undefined values to prevent Firestore 400 errors
+      const sanitizedFields = Object.fromEntries(
+        Object.entries(updatedFields).filter(([_, v]) => v !== undefined)
+      );
+
       const updated = {
         ...request,
-        ...updatedFields,
+        ...sanitizedFields,
         updatedAt: timestamp,
       };
 
-      const changes = Object.keys(updatedFields)
-        .map((key) => `${key}: ${(updatedFields as any)[key]}`)
+      const changes = Object.keys(sanitizedFields)
+        .map((key) => `${key}: ${(sanitizedFields as any)[key]}`)
         .join(", ");
 
       const auditLog = {
@@ -760,7 +766,7 @@ export default function App() {
         notes: `Timika staff updated details: ${changes}.`
       };
 
-      updated.auditLogs = [...updated.auditLogs, auditLog];
+      updated.auditLogs = [...(request.auditLogs || []), auditLog];
 
       await setDoc(docRef, updated);
       setSelectedRequest(updated);
