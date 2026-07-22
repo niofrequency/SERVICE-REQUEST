@@ -438,7 +438,7 @@ export default function TimikaForm({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 animate-fade-in w-full items-start">
+    <div className="flex flex-col lg:flex-row gap-6 animate-fade-in w-full items-start lg:items-stretch">
 
       {/* Form & Photo Attachment Column */}
       <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative w-full">
@@ -663,14 +663,14 @@ export default function TimikaForm({
       </div>
 
       {/* Sidebar Stretched Rectangular Summary Bubbles Column */}
-      <div className="w-full lg:w-[420px] space-y-4 shrink-0">
+      <div className="w-full lg:w-[420px] space-y-4 shrink-0 lg:h-fit">
         
         {/* SECTION A: IN PROGRESS & WAITING SUMMARY BUBBLE (Stretched Rectangular) */}
         <div 
           onClick={() => {
             if (onNavigateInProgress) onNavigateInProgress();
           }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/60 hover:border-blue-400 shadow-sm flex items-center justify-between cursor-pointer transition-all group hover:-translate-y-0.5 w-full"
+          className="bg-white p-5 rounded-2xl border border-slate-200/60 hover:border-blue-400 shadow-sm flex items-center justify-between cursor-pointer transition-all group hover:-translate-y-0.5 w-full h-fit"
         >
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-105 transition-transform">
@@ -685,7 +685,7 @@ export default function TimikaForm({
               </p>
             </div>
           </div>
-          <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold font-mono shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">
+          <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold font-mono shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
             {activeRequests.length}
           </span>
         </div>
@@ -695,7 +695,7 @@ export default function TimikaForm({
           onClick={() => {
             if (onNavigateHistory) onNavigateHistory();
           }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/60 hover:border-blue-400 shadow-sm flex items-center justify-between cursor-pointer transition-all group hover:-translate-y-0.5 w-full"
+          className="bg-white p-5 rounded-2xl border border-slate-200/60 hover:border-blue-400 shadow-sm flex items-center justify-between cursor-pointer transition-all group hover:-translate-y-0.5 w-full h-fit"
         >
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-105 transition-transform">
@@ -710,7 +710,7 @@ export default function TimikaForm({
               </p>
             </div>
           </div>
-          <span className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold font-mono shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">
+          <span className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold font-mono shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
             {completedRequests.length}
           </span>
         </div>
