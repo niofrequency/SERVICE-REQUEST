@@ -43,7 +43,7 @@ interface SurabayaDashboardProps {
     }
   ) => void;
   onSelectRequest: (request: ServiceRequest) => void;
-  onPrint?: (request: ServiceRequest) => void; // Added onPrint prop to connect to App.tsx print engine
+  onPrint?: (request: ServiceRequest) => void; 
   language: "ENG" | "IND";
   loggedInUser: { name: string; location: LocationTeam; email?: string } | null;
 }
@@ -327,7 +327,7 @@ export default function SurabayaDashboard({
             <span className="text-slate-500 font-mono font-bold uppercase text-[9px] shrink-0">{t.operatorLabel}:</span>
             <select
               value={operatorName}
-              disabled={isAuthorized} // Freeze to active user if they are the authorized operator
+              disabled={isAuthorized} 
               onChange={(e) => setOperatorName(e.target.value)}
               className={`font-extrabold bg-transparent focus:outline-none text-slate-700 font-mono text-xs w-full ${isAuthorized ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
@@ -342,7 +342,7 @@ export default function SurabayaDashboard({
         </div>
       </div>
 
-      {/* Kanban Board Grid - Now fully fluid and responsive */}
+      {/* Kanban Board Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 items-start w-full">
         {columns.map((col) => {
           const colRequests = getRequestsByStatus(col.status);
@@ -583,8 +583,8 @@ export default function SurabayaDashboard({
                               </button>
                             </div>
 
-                            {/* Edit & Delete Action Buttons: LOCKED FOR COMPLETED/CANCELLED, BUT WITH ADMIN DELETE OVERRIDE */}
-                            {isAuthorized && (
+                            {/* Edit & Delete Action Buttons (Hidden if Status is WAITING as requested) */}
+                            {isAuthorized && col.status !== RequestStatus.WAITING && (
                               <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
                                 {!locked ? (
                                   <>
