@@ -157,6 +157,19 @@ export default function Header({
                     <span>Surabaya</span>
                   </button>
 
+                    <button
+                    id="role-switch-jakarta"
+                    onClick={() => onRoleChange(LocationTeam.JAKARTA)}
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                    currentRole === LocationTeam.JAKARTA
+                        ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/15"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  }`}
+                >
+                  <Wrench className="h-3.5 w-3.5" /> {/* choose an icon */}
+                  <span>Jakarta</span>
+                </button>
+
                   <button
                     id="role-switch-admin"
                     onClick={() => onRoleChange("Admin")}
