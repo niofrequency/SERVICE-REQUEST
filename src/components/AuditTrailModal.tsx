@@ -10,7 +10,8 @@ import {
   AlertTriangle, 
   Activity,
   Edit3,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { locales } from "../locales.js";
 
@@ -49,6 +50,9 @@ export default function AuditTrailModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Lightbox Zoom Preview State
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   // Sync edits state with selected request
   useEffect(() => {
@@ -126,6 +130,15 @@ export default function AuditTrailModal({
       setErrorMessage(err.message || "Failed to delete service request.");
     }
   };
+
+  // Gather photos safely supporting up to 3 images per request
+  const timikaPhotos = request.photoUrls && request.photoUrls.length > 0 
+    ? request.photoUrls 
+    : (request.photoUrl ? [request.photoUrl] : []);
+
+  const repairPhotos = request.repairPhotoUrls && request.repairPhotoUrls.length > 0 
+    ? request.repairPhotoUrls 
+    : (request.repairPhotoUrl ? [request.repairPhotoUrl] : []);
 
   return (
     <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-[2px] flex items-center justify-center p-3 z-50 animate-fade-in">
@@ -312,59 +325,73 @@ export default function AuditTrailModal({
             </form>
           ) : (
             <>
-              {/* Photos Side-By-Side Check */}
+              {/* Photos Grid Support (Up to 3 Photos Side-by-Side Clickable to Zoom) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Before Photo */}
+                
+                {/* Before Photos (Timika Intake) */}
                 <div className="border border-slate-200/60 rounded-2xl p-3.5 bg-slate-50/50 space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wide">
                     <span className="font-bold text-slate-600 flex items-center space-x-1">
                       <MapPin className="h-3.5 w-3.5 text-blue-600" />
                       <span>{t.timikaProofTitle}</span>
                     </span>
-                    <span className="text-slate-400 font-extrabold">BEFORE</span>
+                    <span className="text-slate-400 font-extrabold">BEFORE ({timikaPhotos.length})</span>
                   </div>
-                  {request.photoUrl ? (
-                    <img
-                      src={request.photoUrl}
-                      alt="Damage proof from Timika"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-40 object-cover rounded-xl border border-slate-200 shadow-sm"
-                    />
+                  
+                  {timikaPhotos.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {timikaPhotos.map((url, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => setLightboxImg(url)}
+                          className="relative rounded-xl overflow-hidden border border-slate-200 h-28 bg-slate-900 cursor-pointer group hover:border-blue-500 transition shadow-sm"
+                        >
+                          <img src={url} alt={`Before proof ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="h-40 border border-dashed border-slate-200 bg-slate-100 rounded-xl flex items-center justify-center text-center p-3 text-slate-400 text-[10px] font-mono font-bold uppercase tracking-wider">
+                    <div className="h-32 border border-dashed border-slate-200 bg-slate-100 rounded-xl flex items-center justify-center text-center p-3 text-slate-400 text-[10px] font-mono font-bold uppercase">
                       No Image Available
                     </div>
                   )}
+
                   <div className="text-[11px] text-slate-600 leading-relaxed bg-white border border-slate-100 p-2.5 rounded-xl">
                     <span className="font-extrabold text-slate-800 text-[10px] uppercase block mb-0.5">{t.damageDetailsLabel}:</span>
                     {request.description}
                   </div>
                 </div>
 
-                {/* After Photo / Resolution */}
+                {/* After Photos (Surabaya / Jakarta Workshop Resolution) */}
                 <div className="border border-slate-200/60 rounded-2xl p-3.5 bg-slate-50/50 space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wide">
                     <span className="font-bold text-slate-600 flex items-center space-x-1">
                       <MapPin className="h-3.5 w-3.5 text-blue-600" />
                       <span>{t.surabayaProofTitle}</span>
                     </span>
-                    <span className="text-slate-400 font-extrabold">AFTER</span>
+                    <span className="text-slate-400 font-extrabold">AFTER ({repairPhotos.length})</span>
                   </div>
 
                   {request.status === RequestStatus.DONE ? (
                     <>
-                      {request.repairPhotoUrl ? (
-                        <img
-                          src={request.repairPhotoUrl}
-                          alt="Repair proof from Surabaya"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-40 object-cover rounded-xl border border-slate-200 shadow-sm"
-                        />
+                      {repairPhotos.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {repairPhotos.map((url, idx) => (
+                            <div 
+                              key={idx} 
+                              onClick={() => setLightboxImg(url)}
+                              className="relative rounded-xl overflow-hidden border border-slate-200 h-28 bg-slate-900 cursor-pointer group hover:border-emerald-500 transition shadow-sm"
+                            >
+                              <img src={url} alt={`After proof ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <div className="h-40 border border-dashed border-slate-200 bg-slate-100 rounded-xl flex items-center justify-center text-center p-3 text-slate-400 text-[10px] font-mono font-bold uppercase tracking-wider">
-                          No Image Available
+                        <div className="h-32 border border-dashed border-slate-200 bg-slate-100 rounded-xl flex items-center justify-center text-center p-3 text-slate-400 text-[10px] font-mono font-bold uppercase">
+                          No Repair Photos Uploaded
                         </div>
                       )}
+                      
                       <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-100/65 rounded-xl p-2.5 leading-relaxed">
                         <span className="font-extrabold text-emerald-950 flex items-center space-x-1 mb-0.5 text-[10px] uppercase">
                           <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
@@ -406,13 +433,11 @@ export default function AuditTrailModal({
                     
                     return (
                       <div key={log.id} className="relative group">
-                        {/* Circle timeline dot */}
                         <span className={`absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border-2 bg-white transition-colors ${
                           isTimika ? "border-amber-500" : "border-blue-600"
                         }`} />
 
                         <div className="space-y-1 text-xs">
-                          {/* Title & Operator line */}
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 justify-between">
                             <div className="flex items-center space-x-1.5">
                               <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase ${
@@ -430,14 +455,12 @@ export default function AuditTrailModal({
                             </span>
                           </div>
 
-                          {/* State transition indicator */}
                           <div className="flex items-center space-x-1.5 text-slate-500 text-[9px] bg-slate-100/60 p-1 px-1.5 rounded-md border border-slate-100 w-fit">
                             <span className="font-semibold text-slate-700">{log.fromStatus}</span>
                             <ArrowRight className="h-3 w-3 text-slate-400" />
                             <span className="font-bold text-slate-800">{log.toStatus}</span>
                           </div>
 
-                          {/* Notes / Comments */}
                           {log.notes && (
                             <p className="text-slate-600 text-xs font-sans mt-1 bg-white p-2.5 rounded-xl border border-slate-100/50 italic">
                               "{log.notes}"
@@ -456,7 +479,6 @@ export default function AuditTrailModal({
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
           
-          {/* Admin Controls Box inside Footer */}
           {loggedInUser?.email === "mpigome44@gmail.com" && !isEditing && (
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
@@ -523,7 +545,21 @@ export default function AuditTrailModal({
             </button>
           </div>
         </div>
+
       </div>
+
+      {/* Lightbox Full Image Zoom Popup */}
+      {lightboxImg && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setLightboxImg(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center">
+            <button onClick={() => setLightboxImg(null)} className="absolute -top-12 right-0 text-white bg-slate-800 hover:bg-rose-600 p-2 rounded-full transition cursor-pointer">
+              <X className="h-6 w-6" />
+            </button>
+            <img src={lightboxImg} alt="Enlarged proof view" className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-slate-700 shadow-2xl" />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
