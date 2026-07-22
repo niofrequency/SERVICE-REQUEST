@@ -1375,14 +1375,14 @@ export default function App() {
                     <div className="relative border-b border-slate-200 pb-3 flex items-center justify-between text-[11px] font-mono">
                       <span className="text-amber-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                        <span>TIMIKA PORT INTAKE (PAPUA)</span>
+                        <span>TIMIKA (PAPUA)</span>
                       </span>
                       <span className="text-purple-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
                         <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse" />
-                        <span>JAKARTA HUB (WEST)</span>
+                        <span>JAKARTA (WEST)</span>
                       </span>
                       <span className="text-blue-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
-                        <span>SURABAYA WORKSHOP CONTROL (JAVA)</span>
+                        <span>SURABAYA (JAVA)</span>
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                       </span>
                     </div>
