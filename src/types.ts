@@ -47,13 +47,15 @@ export interface ServiceRequest {
   priority: PriorityLevel;
   category: IssueCategory;
   description: string;
-  photoUrl: string | null; // Base64 or placeholder image path
+  photoUrl: string | null; // Base64 or placeholder image path (Legacy support)
+  photoUrls?: string[]; // Array supporting up to 3 intake damage photos
   reporterName: string;
   timestamp: string;
   status: RequestStatus;
   location: LocationTeam;
-  repairPhotoUrl?: string; // Base64 uploaded by Surabaya
-  resolutionNotes?: string; // Filled by Surabaya
+  repairPhotoUrl?: string; // Legacy support
+  repairPhotoUrls?: string[]; // Array supporting up to 3 repair completion photos
+  resolutionNotes?: string; // Filled by Surabaya/Jakarta
   cancellationReason?: string; // Mandatory if CANCELLED
   updatedAt: string;
   auditLogs: AuditLog[];
