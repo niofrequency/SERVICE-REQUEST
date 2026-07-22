@@ -725,7 +725,7 @@ export default function App() {
     }
   };
 
-  // Interactive Update Handler (Restricted to Timika / Admin)
+  // Interactive Update Handler with safe field sanitization
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
     const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
     if (!isTimikaUser) {
@@ -1650,7 +1650,7 @@ export default function App() {
                               >
                                 <td className="py-3.5 px-4 font-mono font-bold text-blue-600 group-hover:underline">
                                   {req.id}
-                                 </td>
+                                </td>
                                 <td className="py-3.5 px-4 font-mono font-extrabold text-slate-900">
                                   {req.containerNumber}
                                 </td>
