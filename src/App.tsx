@@ -130,7 +130,7 @@ export default function App() {
 
   const t = locales[language];
 
-  // Top-Level Navigation State ("dashboard" vs "in-progress" vs "history" vs specific flowchart tabs)
+  // Top-Level Navigation State
   const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history" | "awaiting" | "completed">("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DONE" | "CANCELLED">("ALL");
@@ -1168,9 +1168,9 @@ export default function App() {
           onScanImage={handleMobileScanImage}
         />
 
-        {/* PAGE VIEW TAB BAR (Dashboard vs In Progress vs History) - Sticky Header */}
+        {/* PAGE VIEW TAB BAR - Sticky Header */}
         <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0 shadow-md">
-          <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setCurrentTab("dashboard")}
               className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
@@ -1182,6 +1182,31 @@ export default function App() {
               <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span>{language === "ENG" ? "Dashboard" : "Dashboard"}</span>
             </button>
+
+            {/* Extra Tab Links for Surabaya/Jakarta Workshop Users between Dashboard and History */}
+            {(currentRole === LocationTeam.SURABAYA || currentRole === LocationTeam.JAKARTA) && (
+              <>
+                <button
+                  onClick={() => setCurrentTab("awaiting")}
+                  className={`flex items-center justify-center space-x-1.5 px-3 py-2.5 sm:px-3.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                    currentTab === "awaiting" ? "bg-amber-600 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  <Clock className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  <span>Awaiting Repair</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentTab("completed")}
+                  className={`flex items-center justify-center space-x-1.5 px-3 py-2.5 sm:px-3.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                    currentTab === "completed" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <span>Completed</span>
+                </button>
+              </>
+            )}
 
             {/* Hide "In Progress" tab for Surabaya or Jakarta users */}
             {currentRole === LocationTeam.TIMIKA && (
@@ -1267,7 +1292,7 @@ export default function App() {
             {/* TAB VIEW SWITCHER */}
             {currentTab === "dashboard" ? (
               <>
-                {/* Restored 5-Card Scoreboard with Total, Awaiting, In Progress, Completed, Cancelled */}
+                {/* 5-Card Scoreboard with Total, Awaiting, In Progress, Completed, Cancelled */}
                 <div className="hidden md:block space-y-3.5">
                   <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
                     <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
