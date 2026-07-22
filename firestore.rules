@@ -12,6 +12,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "mpigome44@gmail.com";
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -26,7 +30,7 @@ service cloud.firestore {
         && data.reporterName is string && data.reporterName.size() <= 200
         && data.timestamp is string
         && data.status is string && data.status in ['WAITING', 'IN_PROGRESS', 'DONE', 'CANCELLED']
-        && data.location is string && data.location in ['Timika', 'Surabaya']
+        && data.location is string && data.location in ['Timika', 'Surabaya', 'Jakarta']
         && data.updatedAt is string
         && (!('repairPhotoUrl' in data) || data.repairPhotoUrl == null || (data.repairPhotoUrl is string && data.repairPhotoUrl.size() <= 10000000))
         && (!('resolutionNotes' in data) || data.resolutionNotes == null || (data.resolutionNotes is string && data.resolutionNotes.size() <= 5000))
@@ -43,11 +47,16 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && isValidId(requestId)
         && isValidRequest(request.resource.data)
-        && (resource.data.status != 'DONE' && resource.data.status != 'CANCELLED' || request.resource.data.status == resource.data.status);
+        && (
+          isAdmin || 
+          (resource.data.status != 'DONE' && resource.data.status != 'CANCELLED' || request.resource.data.status == resource.data.status)
+        );
+
+      allow delete: if isSignedIn() && (isAdmin || resource.data.location == 'Timika');
     }
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin);
     }
   }
 }
