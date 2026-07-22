@@ -102,8 +102,8 @@ export default function App() {
 
   const t = locales[language];
 
-  // Top-Level Navigation State ("dashboard" vs "history" page view)
-  const [currentTab, setCurrentTab] = useState<"dashboard" | "history">("dashboard");
+  // Top-Level Navigation State ("dashboard" vs "in-progress" vs "history")
+  const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history">("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DONE" | "CANCELLED">("ALL");
 
@@ -664,11 +664,13 @@ export default function App() {
 
   // Interactive Edit & Delete Handlers for Admin Role
   const handleDeleteRequest = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "requests", id));
-      setSelectedRequest(null);
-    } catch (err: any) {
-      alert(`Delete failed: ${err.message}`);
+    if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
+      try {
+        await deleteDoc(doc(db, "requests", id));
+        setSelectedRequest(null); // Closes modal instantly
+      } catch (err: any) {
+        alert(`Delete failed: ${err.message}`);
+      }
     }
   };
 
@@ -1117,9 +1119,9 @@ export default function App() {
           onScanImage={handleMobileScanImage}
         />
 
-        {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) - Sticky Header */}
+        {/* PAGE VIEW TAB BAR (Dashboard vs In Progress vs History) - Sticky Header */}
         <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0 shadow-md">
-          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex">
+          <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex">
             <button
               onClick={() => setCurrentTab("dashboard")}
               className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
@@ -1130,6 +1132,17 @@ export default function App() {
             >
               <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span>{language === "ENG" ? "Dashboard" : "Dashboard"}</span>
+            </button>
+            <button
+              onClick={() => setCurrentTab("in-progress")}
+              className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                currentTab === "in-progress"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length})</span>
             </button>
             <button
               onClick={() => setCurrentTab("history")}
@@ -1197,8 +1210,8 @@ export default function App() {
               </div>
             )}
 
-            {/* TAB VIEW 1: ACTIVE DASHBOARD VIEW */}
-            {currentTab === "dashboard" ? (
+            {/* TAB VIEW: DASHBOARD */}
+            {currentTab === "dashboard" && (
               <>
                 {/* Port Status Scoreboard - Hidden on Mobile */}
                 <div className="hidden md:block space-y-3.5">
@@ -1325,7 +1338,6 @@ export default function App() {
                 </div>
 
                 {/* Main Workspace Layout */}
-                {/* 1. Timika View (Papua Field Technicians) */}
                 {currentRole === LocationTeam.TIMIKA && (
                   <TimikaForm
                     onSubmitSuccess={() => {}}
@@ -1341,10 +1353,10 @@ export default function App() {
                       setPrefilledPhoto(null);
                     }}
                     onNavigateHistory={() => setCurrentTab("history")}
+                    onNavigateInProgress={() => setCurrentTab("in-progress")}
                   />
                 )}
 
-                {/* 2. Surabaya View (Workshop Repairs) - Filters only Surabaya requests */}
                 {currentRole === LocationTeam.SURABAYA && (
                   <SurabayaDashboard
                     requests={requests.filter((r) => r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA))}
@@ -1356,7 +1368,6 @@ export default function App() {
                   />
                 )}
 
-                {/* 3. Jakarta View (Workshop Repairs) - Filters only Jakarta requests */}
                 {currentRole === LocationTeam.JAKARTA && (
                   <JakartaDashboard
                     requests={requests.filter((r) => r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA)}
@@ -1368,10 +1379,8 @@ export default function App() {
                   />
                 )}
 
-                {/* 4. Admin Full Monitor (Split Screen Integration) */}
                 {currentRole === "Admin" && (
                   <div className="space-y-6">
-                    {/* Visual split bar banner */}
                     <div className="relative border-b border-slate-200 pb-3 flex items-center justify-between text-[11px] font-mono">
                       <span className="text-amber-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
@@ -1387,9 +1396,7 @@ export default function App() {
                       </span>
                     </div>
 
-                    {/* Vertical split views */}
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
-                      {/* Left Column: Timika Intake */}
                       <div className="xl:col-span-3 bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
                         <div className="border-b border-slate-100 pb-3">
                           <div className="flex justify-between items-center">
@@ -1417,10 +1424,10 @@ export default function App() {
                             setPrefilledPhoto(null);
                           }}
                           onNavigateHistory={() => setCurrentTab("history")}
+                          onNavigateInProgress={() => setCurrentTab("in-progress")}
                         />
                       </div>
 
-                      {/* Right Column: Surabaya & Jakarta Workshops */}
                       <div className="xl:col-span-9 space-y-6 w-full">
                         <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                           <div>
@@ -1457,10 +1464,53 @@ export default function App() {
                   </div>
                 )}
               </>
+            ) : currentTab === "in-progress" ? (
+              /* TAB VIEW: IN PROGRESS */
+              <div className="space-y-6 max-w-5xl mx-auto w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight flex items-center space-x-2.5">
+                      <Clock className="h-6 w-6 text-amber-500" />
+                      <span>{language === "ENG" ? "Active In-Progress & Waiting Requests" : "Permintaan Aktif & Menunggu"}</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {language === "ENG" ? "Full ledger of active container service tickets currently deployed across hubs." : "Daftar lengkap tiket layanan kontainer aktif yang sedang berjalan."}
+                    </p>
+                  </div>
+                  <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-mono font-bold">
+                    {requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length} Active
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 font-mono text-xs uppercase tracking-wider">
+                      {language === "ENG" ? "No active service requests found" : "Tidak ada permintaan layanan aktif"}
+                    </div>
+                  ) : (
+                    requests
+                      .filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED)
+                      .map((req) => (
+                        <div key={req.id} onClick={() => setSelectedRequest(req)} className="p-4 rounded-xl border border-slate-200 hover:border-blue-400 transition cursor-pointer bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center space-x-2 font-mono text-xs font-bold text-blue-600">
+                              <span>{req.id}</span>
+                              <span>•</span>
+                              <span className="text-slate-900">{req.containerNumber}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">{req.description}</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-amber-100 text-amber-800 w-fit">
+                            {req.status}
+                          </span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
             ) : (
-              /* TAB VIEW 2: DEDICATED ARCHIVE / HISTORY LIST VIEW */
+              /* TAB VIEW: HISTORY */
               <div className="space-y-6">
-                {/* Search and Filters Header */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
@@ -1482,7 +1532,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Search Engine Controls */}
                   <div className="flex flex-col sm:flex-row items-center gap-3">
                     <div className="relative flex-1 w-full">
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1518,7 +1567,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Structured List View Table */}
                 <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
