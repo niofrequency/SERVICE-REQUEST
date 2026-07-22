@@ -1379,7 +1379,7 @@ export default function App() {
                   />
                 )}
 
-               {currentRole === "Admin" && (
+                {currentRole === "Admin" && (
                   <div className="space-y-6">
                     <div className="relative border-b border-slate-200 pb-3 flex items-center justify-between text-[11px] font-mono">
                       <span className="text-amber-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
@@ -1393,9 +1393,8 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
-                      {/* Left Column: Timika Intake restricted to 4 columns max */}
-                      <div className="xl:col-span-4 flex flex-col space-y-6 w-full max-w-[460px] mx-auto xl:mx-0">
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 w-full">
+                      <div className="xl:col-span-4 space-y-6 w-full">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
                           <div className="border-b border-slate-100 pb-3">
                             <div className="flex justify-between items-center">
                               <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
@@ -1427,7 +1426,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Right Column: Workshops */}
                       <div className="xl:col-span-8 space-y-6 w-full">
                         <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                           <div>
