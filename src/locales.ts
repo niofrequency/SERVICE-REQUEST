@@ -35,9 +35,11 @@ export interface LocaleSchema {
   // Header and Roles
   roleTimika: string;
   roleSurabaya: string;
+  roleJakarta: string;
   roleMonitor: string;
   clockSurabaya: string;
   clockTimika: string;
+  clockJakarta: string;
 
   // Demo banners
   demoHubTitle: string;
@@ -151,9 +153,11 @@ export const locales: Record<"ENG" | "IND", LocaleSchema> = {
 
     roleTimika: "Timika (WIT)",
     roleSurabaya: "Surabaya (WIB)",
+    roleJakarta: "Jakarta (WIB)",
     roleMonitor: "Full Monitor",
     clockSurabaya: "Surabaya (WIB)",
     clockTimika: "Timika (WIT)",
+    clockJakarta: "Jakarta (WIB)",
 
     demoHubTitle: "Live Demo Hub",
     demoHubDesc: "Your active session is fully simulated. Use the profile indicators to switch between Timika Inspectors (Papua) and Surabaya Workshop Repairs (East Java).",
@@ -258,9 +262,11 @@ export const locales: Record<"ENG" | "IND", LocaleSchema> = {
 
     roleTimika: "Timika (WIT)",
     roleSurabaya: "Surabaya (WIB)",
+    roleJakarta: "Jakarta (WIB)",
     roleMonitor: "Monitor Penuh",
     clockSurabaya: "Surabaya (WIB)",
     clockTimika: "Timika (WIT)",
+    clockJakarta: "Jakarta (WIB)",
 
     demoHubTitle: "Pusat Demo Langsung",
     demoHubDesc: "Sesi aktif Anda disimulasikan sepenuhnya. Gunakan indikator profil untuk beralih antara Inspektur Timika (Papua) dan Perbaikan Bengkel Surabaya (Jawa Timur).",
