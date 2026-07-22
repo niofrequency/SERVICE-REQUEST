@@ -842,13 +842,24 @@ export default function App() {
     setPrintData({ type: "unit", data: req });
   };
 
-  const totalTickets = requests.length;
-  const waitingTickets = requests.filter((r) => r.status === RequestStatus.WAITING).length;
-  const activeRepairs = requests.filter((r) => r.status === RequestStatus.IN_PROGRESS).length;
-  const completedJobs = requests.filter((r) => r.status === RequestStatus.DONE).length;
-  const cancelledJobs = requests.filter((r) => r.status === RequestStatus.CANCELLED).length;
+  // Role-based scoping for Hubs (Surabaya vs Jakarta vs Timika vs Admin)
+  const scopedRequests = requests.filter((r) => {
+    if (currentRole === LocationTeam.SURABAYA) {
+      return r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA);
+    }
+    if (currentRole === LocationTeam.JAKARTA) {
+      return r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA;
+    }
+    return true; // Admin and Timika see all or handle their specific scoping inside components
+  });
 
-  const historicalRequests = requests.filter((r) => {
+  const totalTickets = scopedRequests.length;
+  const waitingTickets = scopedRequests.filter((r) => r.status === RequestStatus.WAITING).length;
+  const activeRepairs = scopedRequests.filter((r) => r.status === RequestStatus.IN_PROGRESS).length;
+  const completedJobs = scopedRequests.filter((r) => r.status === RequestStatus.DONE).length;
+  const cancelledJobs = scopedRequests.filter((r) => r.status === RequestStatus.CANCELLED).length;
+
+  const historicalRequests = scopedRequests.filter((r) => {
     const isHistorical = r.status === RequestStatus.DONE || r.status === RequestStatus.CANCELLED;
     if (!isHistorical) return false;
     if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
@@ -862,9 +873,9 @@ export default function App() {
     return true;
   });
 
-  // Dynamic filter logic for specific view tabs (Awaiting, In-Progress, Completed)
+  // Dynamic filter logic for specific view tabs (Awaiting, In-Progress, Completed) scoped to current role/hub
   const filterTabRequests = (status: RequestStatus) => {
-    return requests.filter((r) => {
+    return scopedRequests.filter((r) => {
       if (r.status !== status) return false;
       if (searchQuery.trim() !== "") {
         const q = searchQuery.toLowerCase().trim();
@@ -1252,8 +1263,8 @@ export default function App() {
               </>
             )}
 
-            {/* Hide "In Progress" tab for Surabaya or Jakarta users */}
-            {currentRole === LocationTeam.TIMIKA && (
+            {/* Always show In Progress for Timika and Admin as well */}
+            {(currentRole === LocationTeam.TIMIKA || currentRole === "Admin") && (
               <button
                 onClick={() => setCurrentTab("in-progress")}
                 className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
@@ -1263,7 +1274,7 @@ export default function App() {
                 }`}
               >
                 <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({requests.filter(r => r.status !== RequestStatus.DONE && r.status !== RequestStatus.CANCELLED).length})</span>
+                <span>{language === "ENG" ? "In Progress" : "Sedang Proses"} ({activeRepairs})</span>
               </button>
             )}
 
@@ -1345,7 +1356,7 @@ export default function App() {
                   </>
                 )}
 
-                {currentRole === LocationTeam.TIMIKA && (
+                {(currentRole === LocationTeam.TIMIKA || currentRole === "Admin") && (
                   <button
                     onClick={() => { setCurrentTab("in-progress"); setIsMobileMenuOpen(false); }}
                     className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
@@ -1353,7 +1364,7 @@ export default function App() {
                     }`}
                   >
                     <Clock className="h-4 w-4 shrink-0 text-blue-400" />
-                    <span>In Progress</span>
+                    <span>In Progress ({activeRepairs})</span>
                   </button>
                 )}
 
@@ -1546,7 +1557,7 @@ export default function App() {
 
                 {currentRole === LocationTeam.SURABAYA && (
                   <SurabayaDashboard
-                    requests={requests.filter((r) => r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA))}
+                    requests={scopedRequests}
                     onStatusUpdate={handleStatusUpdate}
                     onSelectRequest={(req) => setSelectedRequest(req)}
                     onPrint={handlePrintRequest}
@@ -1557,7 +1568,7 @@ export default function App() {
 
                 {currentRole === LocationTeam.JAKARTA && (
                   <JakartaDashboard
-                    requests={requests.filter((r) => r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA)}
+                    requests={scopedRequests}
                     onStatusUpdate={handleStatusUpdate}
                     onSelectRequest={(req) => setSelectedRequest(req)}
                     onPrint={handlePrintRequest}
