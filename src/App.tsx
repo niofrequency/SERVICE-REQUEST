@@ -172,11 +172,17 @@ export default function App() {
 
         // 2. Fallback default profile if cache is not available, so we never block or get stuck
         if (!loadedFromCache) {
-          const defaultName = user.displayName || user.email?.split("@")[0] || "Operator";
-          const defaultLoc = user.email === "mpigome44@gmail.com" ? LocationTeam.TIMIKA : LocationTeam.TIMIKA;
-          const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "", signature: "" };
+          const isAdmin = user.email === "mpigome44@gmail.com";
+          const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
+          const defaultLoc = isAdmin ? LocationTeam.TIMIKA : LocationTeam.TIMIKA;
+          const defaultProfile = { 
+            name: defaultName, 
+            location: defaultLoc, 
+            email: user.email || "", 
+            signature: isAdmin ? "M.PIGOME" : "" 
+          };
           setLoggedInUser(defaultProfile);
-          if (user.email === "mpigome44@gmail.com") {
+          if (isAdmin) {
             setCurrentRole("Admin");
           } else {
             setCurrentRole(defaultLoc);
@@ -207,9 +213,15 @@ export default function App() {
             }
           } else {
             // Profile doesn't exist yet (e.g., first-time Google/Email sign-up completed in background)
-            const defaultName = user.displayName || user.email?.split("@")[0] || "Operator";
+            const isAdmin = user.email === "mpigome44@gmail.com";
+            const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
             const defaultLoc = LocationTeam.TIMIKA;
-            const defaultProfile = { name: defaultName, location: defaultLoc, email: user.email || "", signature: "" };
+            const defaultProfile = { 
+              name: defaultName, 
+              location: defaultLoc, 
+              email: user.email || "", 
+              signature: isAdmin ? "M.PIGOME" : "" 
+            };
             
             try {
               await setDoc(doc(db, "users", user.uid), {
@@ -217,7 +229,7 @@ export default function App() {
                 name: defaultName,
                 location: defaultLoc,
                 email: user.email || "",
-                signature: ""
+                signature: isAdmin ? "M.PIGOME" : ""
               });
             } catch (writeErr) {
               console.warn("Failed to create profile in Firestore (offline), using local defaults:", writeErr);
@@ -225,7 +237,7 @@ export default function App() {
 
             setLoggedInUser(defaultProfile);
             localStorage.setItem("user", JSON.stringify(defaultProfile));
-            if (user.email === "mpigome44@gmail.com") {
+            if (isAdmin) {
               setCurrentRole("Admin");
             } else {
               setCurrentRole(defaultLoc);
@@ -314,14 +326,14 @@ export default function App() {
           isRegisteringRef.current = true;
           const userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim().toLowerCase(), passwordInput);
           const user = userCredential.user;
-          const newUser = { name: "Admin", location: LocationTeam.TIMIKA, email: "mpigome44@gmail.com", signature: "" };
+          const newUser = { name: "Mark Pigome", location: LocationTeam.TIMIKA, email: "mpigome44@gmail.com", signature: "M.PIGOME" };
           
           await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
-            name: "Admin",
+            name: "Mark Pigome",
             location: LocationTeam.TIMIKA,
             email: "mpigome44@gmail.com",
-            signature: ""
+            signature: "M.PIGOME"
           });
           
           setLoggedInUser(newUser);
@@ -1051,33 +1063,33 @@ export default function App() {
         />
 
         {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) - Fully Responsive for Mobile */}
-        <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
-          <div className="grid grid-cols-2 sm:flex items-center gap-2">
+        <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0">
+          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex">
             <button
               onClick={() => setCurrentTab("dashboard")}
-              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 currentTab === "dashboard"
                   ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
               }`}
             >
-              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span>{language === "ENG" ? "Dashboard" : "Dashboard"}</span>
             </button>
             <button
               onClick={() => setCurrentTab("history")}
-              className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 currentTab === "history"
                   ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
               }`}
             >
-              <History className="h-4 w-4 shrink-0" />
-              <span>{language === "ENG" ? "History / Archives" : "Riwayat & Arsip"}</span>
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span>{language === "ENG" ? "History" : "Arsip"}</span>
             </button>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end text-[11px] font-mono text-slate-400 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+          <div className="hidden sm:flex items-center justify-end text-[11px] font-mono text-slate-400">
             <span>{language === "ENG" ? "Active View:" : "Tampilan:"} <strong className="text-slate-200 uppercase">{currentTab}</strong></span>
           </div>
         </div>
@@ -1133,8 +1145,8 @@ export default function App() {
             {/* TAB VIEW 1: ACTIVE DASHBOARD VIEW */}
             {currentTab === "dashboard" ? (
               <>
-                {/* Port Status Scoreboard */}
-                <div className="space-y-3.5">
+                {/* Port Status Scoreboard - Hidden on Mobile */}
+                <div className="hidden md:block space-y-3.5">
                   <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
                     <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -1222,8 +1234,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Data & Export utilities panel */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* Data & Export utilities panel - Hidden on Mobile */}
+                <div className="hidden md:flex bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center space-x-3">
                     <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
                       <Database className="h-5 w-5" />
