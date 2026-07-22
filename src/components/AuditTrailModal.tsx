@@ -1,3 +1,4 @@
+// src/components/AuditTrailModal.tsx
 import React, { useState, useEffect } from "react";
 import { ServiceRequest, RequestStatus, LocationTeam, PriorityLevel, IssueCategory } from "../types.js";
 import { 
@@ -38,8 +39,9 @@ export default function AuditTrailModal({
 
   const t = locales[language];
 
-  // Authorization Check
-  const isTimikaOrAdmin = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+  // Authorization Check - explicitly including the Admin email
+  const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
+  const isTimikaOrAdmin = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
 
   // Admin States
   const [isEditing, setIsEditing] = useState(false);
