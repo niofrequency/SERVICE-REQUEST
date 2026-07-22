@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { LocationTeam } from "../types.js";
 import { HardHat, Wrench, RefreshCw, Layers, Globe, LogOut, Camera } from "lucide-react";
 import { locales } from "../locales.js";
-
+ 
 interface HeaderProps {
   currentRole: LocationTeam | "Admin";
   onRoleChange: (role: LocationTeam | "Admin") => void;
