@@ -38,6 +38,9 @@ export default function AuditTrailModal({
 
   const t = locales[language];
 
+  // Authorization Check
+  const isTimikaOrAdmin = loggedInUser?.location === LocationTeam.TIMIKA || loggedInUser?.email === "mpigome44@gmail.com";
+
   // Admin States
   const [isEditing, setIsEditing] = useState(false);
   const [editedContainerNumber, setEditedContainerNumber] = useState("");
@@ -479,7 +482,7 @@ export default function AuditTrailModal({
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
           
-          {loggedInUser?.email === "mpigome44@gmail.com" && !isEditing && (
+          {isTimikaOrAdmin && !isEditing && (
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
                 Admin Console:
