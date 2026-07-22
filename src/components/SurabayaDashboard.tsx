@@ -350,7 +350,7 @@ export default function SurabayaDashboard({
           return (
             <div
               key={col.status}
-              className={`rounded-2xl border flex flex-col max-h-[650px] w-full min-w-[250px] bg-slate-50/50 shadow-sm ${col.bg}`}
+              className={`rounded-2xl border flex flex-col h-[650px] w-full min-w-[250px] bg-slate-50/50 shadow-sm ${col.bg}`}
             >
               {/* Column Header */}
               <div
@@ -487,7 +487,7 @@ export default function SurabayaDashboard({
                                 type="button"
                                 onClick={(e) => handleStartRepair(e, req.id)}
                                 disabled={!isAuthorized}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center space-x-2 transition-all"
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-2 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                               >
                                 <Play className="h-3 w-3 fill-current shrink-0" />
                                 <span>{t.acceptRepairBtn}</span>
@@ -501,7 +501,7 @@ export default function SurabayaDashboard({
                                     type="button"
                                     onClick={(e) => handleOpenActionDialog(e, req.id, "DONE")}
                                     disabled={!isAuthorized}
-                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center space-x-1 transition-all"
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center space-x-1 cursor-pointer"
                                   >
                                     <CheckCircle className="h-3 w-3 shrink-0" />
                                     <span>{t.completeBtn}</span>
@@ -511,7 +511,7 @@ export default function SurabayaDashboard({
                                       type="button"
                                       onClick={(e) => handleOpenActionDialog(e, req.id, "CANCELLED")}
                                       disabled={!isAuthorized}
-                                      className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center space-x-1 border border-slate-200 hover:border-rose-200 transition-all"
+                                      className="bg-slate-50 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:text-rose-700 font-extrabold py-2 px-1.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors border border-slate-200 flex items-center justify-center space-x-1 cursor-pointer"
                                     >
                                       <XCircle className="h-3 w-3 shrink-0" />
                                       <span>{t.cancelBtn}</span>
@@ -526,7 +526,7 @@ export default function SurabayaDashboard({
                                       e.stopPropagation();
                                       onPrint(req);
                                     }}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5"
+                                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
                                   >
                                     <Printer className="h-3 w-3" />
                                     <span>PRINT (PDF)</span>
@@ -550,7 +550,7 @@ export default function SurabayaDashboard({
                                       e.stopPropagation();
                                       onPrint(req);
                                     }}
-                                    className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5"
+                                    className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-1.5 px-2 rounded-xl text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer"
                                   >
                                     <Printer className="h-3 w-3" />
                                     <span>PRINT CERTIFICATE</span>
