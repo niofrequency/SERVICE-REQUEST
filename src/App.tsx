@@ -952,6 +952,19 @@ export default function App() {
                     >
                       SURABAYA
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setSignupLocation(LocationTeam.JAKARTA)}
+                      className={`py-3 px-2 rounded-xl border text-[10px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
+                      signupLocation === LocationTeam.JAKARTA
+                          ? "bg-blue-600/15 border-blue-500 text-blue-200 shadow-inner"
+                          : "bg-slate-900/40 border-slate-800 text-slate-500 hover:border-slate-700"
+                      }`}
+                    >
+                      JAKARTA
+                  </button>
+
+                    
                   </div>
                 </div>
 
