@@ -582,8 +582,8 @@ export default function JakartaDashboard({
                               </button>
                             </div>
 
-                            {/* Edit & Delete Action Buttons */}
-                            {isAuthorized && (
+                            {/* Edit & Delete Action Buttons (Hidden if Status is WAITING as requested) */}
+                            {isAuthorized && col.status !== RequestStatus.WAITING && (
                               <div className="flex flex-wrap items-center justify-end gap-2 pt-1.5 border-t border-slate-100/80" onClick={(e) => e.stopPropagation()}>
                                 {!locked ? (
                                   <>
