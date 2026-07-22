@@ -599,7 +599,7 @@ export default function TimikaForm({
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                SURABAYA WORKSHOP
+                SURABAYA
               </button>
               <button
                 type="button"
@@ -611,7 +611,7 @@ export default function TimikaForm({
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                JAKARTA HUB
+                JAKARTA
               </button>
             </div>
           </div>
