@@ -54,18 +54,18 @@ export default function AdminProfile({
         </span>
       </div>
 
-      {/* Interactive Flow-Chart Pipeline Layout */}
+      {/* Interactive Flow-Chart Pipeline Layout (Single Horizontal Row) */}
       <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
         <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
           {language === "ENG" ? "Container Service Flowchart Pipeline" : "Alur Pipa Layanan Kontainer"}
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center pt-1">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
           {/* Box 1: Awaiting Repair */}
           <div
             onClick={() => onNavigateTab ? onNavigateTab("awaiting") : onNavigateInProgress()}
-            className="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between md:col-span-2"
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
               <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Step 1</span>
@@ -78,7 +78,7 @@ export default function AdminProfile({
           </div>
 
           {/* Arrow 1 */}
-          <div className="hidden md:flex justify-center text-slate-400">
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
               <ArrowRight className="h-4 w-4 animate-pulse text-blue-600" />
             </div>
@@ -87,7 +87,7 @@ export default function AdminProfile({
           {/* Box 2: In Progress */}
           <div
             onClick={onNavigateInProgress}
-            className="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between md:col-span-2"
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
               <span className="text-[9px] font-mono font-bold text-blue-600 uppercase">Step 2</span>
@@ -98,19 +98,18 @@ export default function AdminProfile({
               {inProgressCount}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center pt-1">
-          <div className="hidden md:block md:col-span-2"></div>
-          <div className="hidden md:flex justify-center text-slate-400">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner rotate-90 md:rotate-0">
+          {/* Arrow 2 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
               <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
             </div>
           </div>
+
           {/* Box 3: Completed */}
           <div
             onClick={() => onNavigateTab ? onNavigateTab("completed") : onNavigateHistory()}
-            className="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between md:col-span-2"
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
               <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase">Step 3</span>
