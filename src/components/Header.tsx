@@ -50,7 +50,7 @@ export default function Header({
     const updateClocks = () => {
       const now = new Date();
 
-      // WIB (Surabaya, UTC+7)
+      // WIB (Surabaya & Jakarta, UTC+7)
       const wibStr = now.toLocaleTimeString("en-US", {
         timeZone: "Asia/Jakarta",
         hour: "2-digit",
@@ -108,17 +108,17 @@ export default function Header({
               {/* Timezones Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-slate-800 shrink-0" />
 
-              {/* Real-time Timezone Clocks - Hidden on mobile screens */}
+              {/* Real-time Timezone Clocks */}
               <div className="hidden sm:flex items-center space-x-3 bg-slate-900/60 py-1.5 px-3 rounded-lg border border-slate-800/80 text-[11px] font-mono w-fit shrink-0">
                 <div className="text-center border-r border-slate-800 pr-3">
                   <span className="block text-[8px] text-amber-500 uppercase font-bold tracking-wider mb-0.5">
-                    {t.clockSurabaya}
+                    Surabaya/Jakarta (WIB)
                   </span>
                   <span className="text-xs font-bold text-slate-200 tracking-wider">{wibTime || "00:00:00"}</span>
                 </div>
                 <div className="text-center pl-1">
                   <span className="block text-[8px] text-emerald-400 uppercase font-bold tracking-wider mb-0.5">
-                    {t.clockTimika}
+                    Timika (WIT)
                   </span>
                   <span className="text-xs font-bold text-slate-200 tracking-wider">{witTime || "00:00:00"}</span>
                 </div>
@@ -157,18 +157,18 @@ export default function Header({
                     <span>Surabaya</span>
                   </button>
 
-                    <button
+                  <button
                     id="role-switch-jakarta"
                     onClick={() => onRoleChange(LocationTeam.JAKARTA)}
                     className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
-                    currentRole === LocationTeam.JAKARTA
-                        ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/15"
+                      currentRole === LocationTeam.JAKARTA
+                        ? "bg-purple-600 text-white font-bold shadow-md shadow-purple-600/15"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  }`}
-                >
-                  <Wrench className="h-3.5 w-3.5" /> {/* choose an icon */}
-                  <span>Jakarta</span>
-                </button>
+                    }`}
+                  >
+                    <Wrench className="h-3.5 w-3.5" />
+                    <span>Jakarta</span>
+                  </button>
 
                   <button
                     id="role-switch-admin"
@@ -256,17 +256,19 @@ export default function Header({
               className="flex flex-col items-center justify-center h-full text-slate-400 hover:text-white cursor-pointer select-none"
               title="Switch Role"
             >
-              {currentRole === LocationTeam.TIMIKA && <HardHat className="h-5 w-5 text-slate-400" />}
-              {currentRole === LocationTeam.SURABAYA && <Wrench className="h-5 w-5 text-slate-400" />}
-              {currentRole === "Admin" && <Layers className="h-5 w-5 text-slate-400" />}
+              {currentRole === LocationTeam.TIMIKA && <HardHat className="h-5 w-5 text-amber-400" />}
+              {currentRole === LocationTeam.SURABAYA && <Wrench className="h-5 w-5 text-blue-400" />}
+              {currentRole === LocationTeam.JAKARTA && <Wrench className="h-5 w-5 text-purple-400" />}
+              {currentRole === "Admin" && <Layers className="h-5 w-5 text-indigo-400" />}
               <span className="text-[8px] font-bold font-mono tracking-wider uppercase mt-1 text-slate-400">
                 {currentRole === "Admin" ? "Monitor" : currentRole}
               </span>
             </button>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 select-none">
-              {currentRole === LocationTeam.TIMIKA && <HardHat className="h-5 w-5 text-slate-400" />}
-              {currentRole === LocationTeam.SURABAYA && <Wrench className="h-5 w-5 text-slate-400" />}
+              {currentRole === LocationTeam.TIMIKA && <HardHat className="h-5 w-5 text-amber-400" />}
+              {currentRole === LocationTeam.SURABAYA && <Wrench className="h-5 w-5 text-blue-400" />}
+              {currentRole === LocationTeam.JAKARTA && <Wrench className="h-5 w-5 text-purple-400" />}
               <span className="text-[8px] font-bold font-mono tracking-wider uppercase mt-1 text-slate-400">
                 {currentRole}
               </span>
@@ -312,7 +314,7 @@ export default function Header({
             className="flex flex-col items-center justify-center h-full text-slate-400 hover:text-white cursor-pointer select-none"
             title="Sync requests"
           >
-            <RefreshCw className={`h-5 w-5 text-slate-400 ${isPolling ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-5 w-5 text-slate-400 ${isPolling ? "animate-spin text-amber-500" : ""}`} />
             <span className="text-[8px] font-bold font-mono tracking-wider uppercase mt-1 text-slate-400">
               SYNC
             </span>
