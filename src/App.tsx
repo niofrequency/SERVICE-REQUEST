@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { ServiceRequest, RequestStatus, LocationTeam, PriorityLevel, IssueCategory } from "./types.js";
 import Header from "./components/Header.js";
 import TimikaForm from "./components/TimikaForm.js";
-import JakartaDashboard from "./components/JakartaDashboard.js";
 import SurabayaDashboard from "./components/SurabayaDashboard.js";
+import JakartaDashboard from "./components/JakartaDashboard.js";
 import AuditTrailModal from "./components/AuditTrailModal.js";
 import { 
   ClipboardList, 
@@ -454,15 +454,15 @@ export default function App() {
     setIsMobileScanning(true);
     setMobileScanError(null);
     
-    if (currentRole === LocationTeam.SURABAYA) {
-      // In Surabaya mode: Attach completion photo to the currently selected active ticket
+    if (currentRole === LocationTeam.SURABAYA || currentRole === LocationTeam.JAKARTA) {
+      // In Surabaya or Jakarta mode: Attach completion photo to the currently selected active ticket
       if (selectedRequest && (selectedRequest.status === RequestStatus.WAITING || selectedRequest.status === RequestStatus.IN_PROGRESS)) {
         setMobileScanStatus(language === "ENG" ? `Attaching completion photo to ${selectedRequest.id}...` : `Melampirkan foto selesai ke ${selectedRequest.id}...`);
         
         handleStatusUpdate(selectedRequest.id, {
           status: RequestStatus.DONE,
-          operator: loggedInUser?.name || "Surabaya Technician",
-          location: LocationTeam.SURABAYA,
+          operator: loggedInUser?.name || "Workshop Technician",
+          location: currentRole as LocationTeam,
           notes: "Repair completed with direct mobile photo upload.",
           resolutionNotes: "Structural repair / maintenance completed and verified via mobile photo.",
           repairPhotoUrl: base64Data
@@ -547,7 +547,7 @@ export default function App() {
     }
   };
 
-  // Handle status update (Commenced by Surabaya workshop or cancelled)
+  // Handle status update (Commenced by Surabaya/Jakarta workshop or cancelled)
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -572,7 +572,7 @@ export default function App() {
         if (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE) {
           throw new Error("Unauthorized: Timika port inspectors cannot modify or advance workshop repair jobs.");
         }
-      } else if (updatePayload.location === LocationTeam.SURABAYA) {
+      } else if (updatePayload.location === LocationTeam.SURABAYA || updatePayload.location === LocationTeam.JAKARTA) {
         if (oldStatus === RequestStatus.DONE && updatePayload.status !== RequestStatus.DONE) {
           throw new Error("Unauthorized: Completed jobs are certified and locked in the ledger.");
         }
@@ -692,7 +692,7 @@ export default function App() {
       "Damage Description",
       "Timika Inspector",
       "Reported At",
-      "Surabaya Repairer",
+      "Workshop Repairer",
       "Completed At",
       "Resolution Notes",
       "Cancellation Reason"
@@ -700,7 +700,7 @@ export default function App() {
 
     const rows = requests.map((req) => {
       const completedLog = req.auditLogs.find(l => l.toStatus === RequestStatus.DONE);
-      const repairer = completedLog?.operator || (req.resolutionNotes ? "Surabaya Tech" : "-");
+      const repairer = completedLog?.operator || (req.resolutionNotes ? "Workshop Tech" : "-");
       
       return [
         req.id,
@@ -931,11 +931,11 @@ export default function App() {
                   <label className="block text-[10px] font-mono uppercase tracking-wider font-bold text-slate-400">
                     {language === "ENG" ? "SELECT BRANCH LOCATION" : "PILIH LOKASI CABANG"}
                   </label>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setSignupLocation(LocationTeam.TIMIKA)}
-                      className={`py-3 px-2 rounded-xl border text-[10px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
+                      className={`py-3 px-1 rounded-xl border text-[9px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
                         signupLocation === LocationTeam.TIMIKA
                           ? "bg-amber-600/15 border-amber-500 text-amber-200 shadow-inner"
                           : "bg-slate-900/40 border-slate-800 text-slate-500 hover:border-slate-700"
@@ -946,7 +946,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setSignupLocation(LocationTeam.SURABAYA)}
-                      className={`py-3 px-2 rounded-xl border text-[10px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
+                      className={`py-3 px-1 rounded-xl border text-[9px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
                         signupLocation === LocationTeam.SURABAYA
                           ? "bg-blue-600/15 border-blue-500 text-blue-200 shadow-inner"
                           : "bg-slate-900/40 border-slate-800 text-slate-500 hover:border-slate-700"
@@ -957,16 +957,14 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setSignupLocation(LocationTeam.JAKARTA)}
-                      className={`py-3 px-2 rounded-xl border text-[10px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
-                      signupLocation === LocationTeam.JAKARTA
-                          ? "bg-blue-600/15 border-blue-500 text-blue-200 shadow-inner"
+                      className={`py-3 px-1 rounded-xl border text-[9px] uppercase font-bold tracking-tight text-center transition-all cursor-pointer ${
+                        signupLocation === LocationTeam.JAKARTA
+                          ? "bg-purple-600/15 border-purple-500 text-purple-200 shadow-inner"
                           : "bg-slate-900/40 border-slate-800 text-slate-500 hover:border-slate-700"
                       }`}
                     >
                       JAKARTA
-                  </button>
-
-                    
+                    </button>
                   </div>
                 </div>
 
@@ -1077,8 +1075,8 @@ export default function App() {
           onScanImage={handleMobileScanImage}
         />
 
-        {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) - Fully Responsive for Mobile */}
-        <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0">
+        {/* PAGE VIEW TAB BAR (Dashboard vs Archive History) - Sticky Header */}
+        <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between shrink-0 shadow-md">
           <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex">
             <button
               onClick={() => setCurrentTab("dashboard")}
@@ -1304,7 +1302,7 @@ export default function App() {
                   />
                 )}
 
-                {/* 2. Surabaya View (Workshop Repairs) - Hooked to handlePrintRequest */}
+                {/* 2. Surabaya View (Workshop Repairs) */}
                 {currentRole === LocationTeam.SURABAYA && (
                   <SurabayaDashboard
                     requests={requests}
@@ -1316,9 +1314,9 @@ export default function App() {
                   />
                 )}
 
-                {/* 3. Jakarta View (Workshop Repairs) - Hooked to handlePrintRequest */}
+                {/* 3. Jakarta View (Workshop Repairs) */}
                 {currentRole === LocationTeam.JAKARTA && (
-                 <JakartaDashboard
+                  <JakartaDashboard
                     requests={requests}
                     onStatusUpdate={handleStatusUpdate}
                     onSelectRequest={(req) => setSelectedRequest(req)}
@@ -1328,7 +1326,7 @@ export default function App() {
                   />
                 )}
 
-               {/* 4. Admin Full Monitor (Split Screen Integration) */}
+                {/* 4. Admin Full Monitor (Split Screen Integration) */}
                 {currentRole === "Admin" && (
                   <div className="space-y-6">
                     {/* Visual split bar banner */}
@@ -1380,13 +1378,13 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Right Column: Surabaya Workshop Dashboard - Hooked to handlePrintRequest */}
+                      {/* Right Column: Surabaya & Jakarta Workshops */}
                       <div className="xl:col-span-9 space-y-6 w-full">
                         <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
                           <div>
                             <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
                               <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span>SURABAYA WORKSHOP SYSTEM</span>
+                              <span>SURABAYA & JAKARTA WORKSHOP SYSTEM</span>
                             </h3>
                             <p className="text-xs text-slate-500 mt-0.5">
                               Technicians diagnostic queue, process parts, signoff completion logs, or cancel tickets.
@@ -1394,14 +1392,24 @@ export default function App() {
                           </div>
                           <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">LIVE</span>
                         </div>
-                        <SurabayaDashboard
-                          requests={requests}
-                          onStatusUpdate={handleStatusUpdate}
-                          onSelectRequest={(req) => setSelectedRequest(req)}
-                          onPrint={handlePrintRequest}
-                          language={language}
-                          loggedInUser={loggedInUser}
-                        />
+                        <div className="space-y-6">
+                          <SurabayaDashboard
+                            requests={requests}
+                            onStatusUpdate={handleStatusUpdate}
+                            onSelectRequest={(req) => setSelectedRequest(req)}
+                            onPrint={handlePrintRequest}
+                            language={language}
+                            loggedInUser={loggedInUser}
+                          />
+                          <JakartaDashboard
+                            requests={requests}
+                            onStatusUpdate={handleStatusUpdate}
+                            onSelectRequest={(req) => setSelectedRequest(req)}
+                            onPrint={handlePrintRequest}
+                            language={language}
+                            loggedInUser={loggedInUser}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1597,7 +1605,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-4">
             <span className="hidden sm:inline">PT. PANJASA-INTRADIN &copy; 2026</span>
-            <span className="text-slate-400">TIMIKA &amp; SURABAYA HUB</span>
+            <span className="text-slate-400">TIMIKA, SURABAYA &amp; JAKARTA HUB</span>
           </div>
         </footer>
       </div>
@@ -1610,7 +1618,7 @@ export default function App() {
             (() => {
               const req = printData.data as ServiceRequest;
               const completedLog = req.auditLogs.find(l => l.toStatus === RequestStatus.DONE);
-              const repairer = completedLog?.operator || (req.resolutionNotes ? "Surabaya Repairer" : "");
+              const repairer = completedLog?.operator || (req.resolutionNotes ? "Workshop Repairer" : "");
               
               return (
                 <div className="p-4 max-w-[800px] mx-auto border-2 border-black bg-white text-black font-sans space-y-3 print:w-full print:max-w-none print:border-2 print:border-black print:p-4 print:my-0">
@@ -1627,8 +1635,7 @@ export default function App() {
                       <div>
                         <h1 className="text-base font-black uppercase tracking-tight leading-none text-black">PT. PANJASA INTRADIN</h1>
                         <p className="text-[11px] font-semibold text-gray-800 mt-0.5">Container Services &amp; Maintenance</p>
-                        <p className="text-[10px] text-gray-600 font-mono">Jl. Kalianak No. 73C, Surabaya</p>
-                        <p className="text-[10px] text-gray-600 font-mono">Telp. 031-7496720</p>
+                        <p className="text-[10px] text-gray-600 font-mono">PT Panjasa Intradin Hub</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -1678,7 +1685,7 @@ export default function App() {
                     {/* Row 3: Timika Tech details & Sign */}
                     <div className="grid grid-cols-2 text-xs">
                       <div className="border-r-2 border-black p-2 space-y-1">
-                        <p><span className="font-bold">Technician Name :</span> {req.reporterName || "marktest"}</p>
+                        <p><span className="font-bold">Technician Name :</span> {req.reporterName || "Mark Pigome"}</p>
                         <p><span className="font-bold">Location :</span> {req.location || "Timika"}</p>
                         <p><span className="font-bold">Date :</span> {req.timestamp ? new Date(req.timestamp).toLocaleDateString() : "7/21/2026"}</p>
                       </div>
@@ -1708,7 +1715,7 @@ export default function App() {
                     <div className="h-[1px] border-t-2 border-dashed border-gray-400 print:border-black flex-grow"></div>
                   </div>
 
-                  {/* Bottom Table: SURABAYA Repair */}
+                  {/* Bottom Table: Workshop Repair */}
                   <div className="border-2 border-black break-inside-avoid">
                     {/* Row 1: Corrective Action Report */}
                     <div className="border-b-2 border-black grid grid-cols-4 min-h-[90px]">
@@ -1719,8 +1726,8 @@ export default function App() {
                         <p className="font-sans font-medium text-black leading-relaxed whitespace-pre-wrap">{req.resolutionNotes || "done"}</p>
                         {req.repairPhotoUrl && (
                           <div className="mt-2 border border-gray-400 p-1 w-44 inline-block bg-white">
-                            <p className="text-[8px] uppercase font-bold font-mono text-gray-500 mb-0.5">Attached Repair Photo (Surabaya Workshop)</p>
-                            <img src={req.repairPhotoUrl} alt="Surabaya Repair" className="w-full h-20 object-cover border border-gray-200" />
+                            <p className="text-[8px] uppercase font-bold font-mono text-gray-500 mb-0.5">Attached Repair Photo (Workshop)</p>
+                            <img src={req.repairPhotoUrl} alt="Workshop Repair" className="w-full h-20 object-cover border border-gray-200" />
                           </div>
                         )}
                       </div>
@@ -1732,10 +1739,10 @@ export default function App() {
                       <div className="p-2 flex flex-col justify-between">
                         <div>
                           <span className="font-bold block uppercase text-[9px] text-gray-500">Repaired by,</span>
-                          <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? (repairer || "hamza test") : "________________"}</span>
+                          <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? (repairer || "Workshop Tech") : "________________"}</span>
                         </div>
                         <div className="text-[9px] text-gray-600 space-y-0 font-mono">
-                          <p>Location : SURABAYA</p>
+                          <p>Location : Workshop Hub</p>
                           <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
@@ -1747,7 +1754,7 @@ export default function App() {
                           <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? "Administrasi Operasional" : "________________"}</span>
                         </div>
                         <div className="text-[9px] text-gray-600 space-y-0 font-mono">
-                          <p>Location : SURABAYA</p>
+                          <p>Location : Hub Office</p>
                           <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
@@ -1759,7 +1766,7 @@ export default function App() {
                           <span className="font-bold text-black text-xs block mt-0.5">{req.status === RequestStatus.DONE ? "Supervisor / Coordinator" : "________________"}</span>
                         </div>
                         <div className="text-[9px] text-gray-600 space-y-0 font-mono">
-                          <p>Location : SURABAYA</p>
+                          <p>Location : Hub Office</p>
                           <p>Date : {req.status === RequestStatus.DONE ? new Date(req.updatedAt).toLocaleDateString() : "7/21/2026"}</p>
                         </div>
                       </div>
@@ -1823,14 +1830,14 @@ export default function App() {
                         <th className="border-r border-black p-1.5 w-20">Category</th>
                         <th className="border-r border-black p-1.5 w-24">Timika Tech</th>
                         <th className="border-r border-black p-1.5 w-20">Reported Date</th>
-                        <th className="border-r border-black p-1.5 w-24">Surabaya Tech</th>
+                        <th className="border-r border-black p-1.5 w-24">Workshop Tech</th>
                         <th className="p-1.5">Resolution / Cancellation Notes</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-black">
                       {list.map((req) => {
                         const completedLog = req.auditLogs.find(l => l.toStatus === RequestStatus.DONE);
-                        const repairer = completedLog?.operator || (req.resolutionNotes ? "Surabaya Tech" : "-");
+                        const repairer = completedLog?.operator || (req.resolutionNotes ? "Workshop Tech" : "-");
                         
                         return (
                           <tr key={req.id} className="align-top break-inside-avoid">
