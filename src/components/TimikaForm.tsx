@@ -191,8 +191,77 @@ export default function TimikaForm({
   return (
     <div className="space-y-6 w-full flex flex-col">
 
-      {/* Stretched Full-Width Service Request Form Column (Appears first on all screen sizes) */}
-      <div className="w-full bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full order-1">
+      {/* Interactive Flow-Chart Pipeline Layout for Timika (Horizontal Row - Appears above on desktop, below on mobile via flex-col-reverse or normal ordering) */}
+      <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3 order-2 md:order-1">
+        <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          {language === "ENG" ? "Timika Service Flowchart Pipeline" : "Alur Pipa Layanan Timika"}
+        </h3>
+        
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
+          {/* Box 1: Awaiting Repair */}
+          <div
+            onClick={() => onNavigateTab ? onNavigateTab("awaiting") : onNavigateInProgress?.()}
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between"
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Step 1</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
+              <p className="text-[10px] text-slate-500">Click to view queue</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {waitingCount}
+            </div>
+          </div>
+
+          {/* Arrow 1 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+              <ArrowRight className="h-4 w-4 animate-pulse text-blue-600" />
+            </div>
+          </div>
+
+          {/* Box 2: In Progress */}
+          <div
+            onClick={() => onNavigateTab ? onNavigateTab("in-progress") : onNavigateInProgress?.()}
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between"
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-blue-600 uppercase">Step 2</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">In Progress</h4>
+              <p className="text-[10px] text-slate-500">Click to view active jobs</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {inProgressCount}
+            </div>
+          </div>
+
+          {/* Arrow 2 */}
+          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+              <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
+            </div>
+          </div>
+
+          {/* Box 3: Completed */}
+          <div
+            onClick={() => onNavigateTab ? onNavigateTab("completed") : onNavigateHistory?.()}
+            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between"
+          >
+            <div className="space-y-0.5">
+              <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase">Step 3</span>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Completed</h4>
+              <p className="text-[10px] text-slate-500">Click to view archives</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
+              {completedCount}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stretched Full-Width Service Request Form Column (Appears above pipeline on desktop, order-1 on mobile/desktop via responsive class) */}
+      <div className="w-full bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full order-1 md:order-2">
         {!isAuthorized && (
           <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm shadow-2xl text-white space-y-4">
@@ -411,75 +480,6 @@ export default function TimikaForm({
             )}
           </button>
         </form>
-      </div>
-
-      {/* Interactive Flow-Chart Pipeline Layout for Timika (Horizontal Row - Moved below form for mobile & desktop flow) */}
-      <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3 order-2">
-        <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          {language === "ENG" ? "Timika Service Flowchart Pipeline" : "Alur Pipa Layanan Timika"}
-        </h3>
-        
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
-          {/* Box 1: Awaiting Repair */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("awaiting") : onNavigateInProgress?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Step 1</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
-              <p className="text-[10px] text-slate-500">Click to view queue</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {waitingCount}
-            </div>
-          </div>
-
-          {/* Arrow 1 */}
-          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-              <ArrowRight className="h-4 w-4 animate-pulse text-blue-600" />
-            </div>
-          </div>
-
-          {/* Box 2: In Progress */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("in-progress") : onNavigateInProgress?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-blue-600 uppercase">Step 2</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">In Progress</h4>
-              <p className="text-[10px] text-slate-500">Click to view active jobs</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {inProgressCount}
-            </div>
-          </div>
-
-          {/* Arrow 2 */}
-          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-              <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
-            </div>
-          </div>
-
-          {/* Box 3: Completed */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("completed") : onNavigateHistory?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase">Step 3</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Completed</h4>
-              <p className="text-[10px] text-slate-500">Click to view archives</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {completedCount}
-            </div>
-          </div>
-        </div>
       </div>
 
     </div>
