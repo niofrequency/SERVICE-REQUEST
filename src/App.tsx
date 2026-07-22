@@ -9,6 +9,7 @@ import Header from "./components/Header.js";
 import TimikaForm from "./components/TimikaForm.js";
 import SurabayaDashboard from "./components/SurabayaDashboard.js";
 import JakartaDashboard from "./components/JakartaDashboard.js";
+import AdminProfile from "./components/AdminProfile.js";
 import AuditTrailModal from "./components/AuditTrailModal.js";
 import { 
   ClipboardList, 
@@ -16,9 +17,7 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   Clock, 
-  Info,
   Lock,
-  UserCheck,
   FileSpreadsheet,
   Printer,
   Database,
@@ -171,10 +170,6 @@ export default function App() {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
-
-  const timikaTechs = ["Anis Matta", "Yoppy Kogoya", "Eko Tabuni", "Custom Name"];
-  const surabayaTechs = ["Bambang Santoso", "Hendra Wijaya", "Syarifuddin", "Custom Name"];
-  const jakartaTechs = ["Dimas Prasetyo", "Siti Nurhayati", "Custom Name"];
 
   // Error logging function
   const handleFirestoreError = (err: unknown, operationType: OperationType, path: string | null) => {
@@ -1432,87 +1427,25 @@ export default function App() {
                   />
                 )}
 
+                {/* Admin Portal Layout (Extracted) */}
                 {currentRole === "Admin" && (
-                  <div className="space-y-6">
-                    <div className="relative border-b border-slate-200 pb-3 flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-amber-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                        <span>TIMIKA PORT INTAKE (PAPUA)</span>
-                      </span>
-                      <span className="text-blue-600 font-extrabold flex items-center space-x-1.5 uppercase tracking-wider">
-                        <span>SURABAYA &amp; JAKARTA WORKSHOP SYSTEM</span>
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
-                      <div className="xl:col-span-4 space-y-6 w-full">
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
-                          <div className="border-b border-slate-100 pb-3">
-                            <div className="flex justify-between items-center">
-                              <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
-                                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                <span>TIMIKA FIELD OPERATIONS</span>
-                              </h3>
-                              <span className="text-[10px] bg-blue-500/10 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden lg:inline-block">DIRECT UPLOAD</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Field technicians attach damage documentation directly to incoming container logs.
-                            </p>
-                          </div>
-                          <TimikaForm
-                            onSubmitSuccess={() => {}}
-                            onSubmitRequest={handleCreateRequest}
-                            requests={requests}
-                            onSelectRequest={(req) => setSelectedRequest(req)}
-                            language={language}
-                            loggedInUser={loggedInUser}
-                            prefilledContainerNumber={prefilledContainerNumber}
-                            prefilledPhoto={prefilledPhoto}
-                            onClearPrefilled={() => {
-                              setPrefilledContainerNumber("");
-                              setPrefilledPhoto(null);
-                            }}
-                            onNavigateHistory={() => setCurrentTab("history")}
-                            onNavigateInProgress={() => setCurrentTab("in-progress")}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="xl:col-span-8 space-y-6 w-full">
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm border-l-4 border-l-blue-600 flex items-center justify-between">
-                          <div>
-                            <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span>SURABAYA &amp; JAKARTA WORKSHOP SYSTEM</span>
-                            </h3>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Technicians diagnostic queue, process parts, signoff completion logs, or cancel tickets.
-                            </p>
-                          </div>
-                          <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">LIVE</span>
-                        </div>
-                        <div className="space-y-6">
-                          <SurabayaDashboard
-                            requests={requests.filter((r) => r.location === LocationTeam.SURABAYA || (!r.location && r.destinationLocation === LocationTeam.SURABAYA))}
-                            onStatusUpdate={handleStatusUpdate}
-                            onSelectRequest={(req) => setSelectedRequest(req)}
-                            onPrint={handlePrintRequest}
-                            language={language}
-                            loggedInUser={loggedInUser}
-                          />
-                          <JakartaDashboard
-                            requests={requests.filter((r) => r.location === LocationTeam.JAKARTA || r.destinationLocation === LocationTeam.JAKARTA)}
-                            onStatusUpdate={handleStatusUpdate}
-                            onSelectRequest={(req) => setSelectedRequest(req)}
-                            onPrint={handlePrintRequest}
-                            language={language}
-                            loggedInUser={loggedInUser}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <AdminProfile
+                    requests={requests}
+                    language={language}
+                    loggedInUser={loggedInUser}
+                    onCreateRequest={handleCreateRequest}
+                    onStatusUpdate={handleStatusUpdate}
+                    onSelectRequest={setSelectedRequest}
+                    onPrintRequest={handlePrintRequest}
+                    prefilledContainerNumber={prefilledContainerNumber}
+                    prefilledPhoto={prefilledPhoto}
+                    onClearPrefilled={() => {
+                      setPrefilledContainerNumber("");
+                      setPrefilledPhoto(null);
+                    }}
+                    onNavigateHistory={() => setCurrentTab("history")}
+                    onNavigateInProgress={() => setCurrentTab("in-progress")}
+                  />
                 )}
               </>
             ) : currentTab === "in-progress" ? (
