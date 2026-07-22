@@ -113,7 +113,7 @@ export default function TimikaForm({
     }
   }, [prefilledPhoto]);
 
-  // Auth constraint check
+  // Auth constraint check: Only Timika users or Admin can modify/edit in Timika view
   const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
   const isAuthorized = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
 
@@ -130,11 +130,6 @@ export default function TimikaForm({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to check if a log is locked from modification
-  const isLogLocked = (status: RequestStatus) => {
-    return status === RequestStatus.IN_PROGRESS || status === RequestStatus.DONE || status === RequestStatus.CANCELLED;
-  };
-
   // Separate logs into active (In Progress / Waiting) and finished (Done / Cancelled)
   const activeRequests = requests.filter(
     (req) => req.status !== RequestStatus.DONE && req.status !== RequestStatus.CANCELLED
@@ -143,9 +138,13 @@ export default function TimikaForm({
     (req) => req.status === RequestStatus.DONE || req.status === RequestStatus.CANCELLED
   );
 
-  // Delete Request Handler
+  // Delete Request Handler (Restricted to Timika / Admin)
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    if (!isAuthorized) {
+      alert("Unauthorized: Only Timika personnel can delete requests.");
+      return;
+    }
     if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
       try {
         await deleteDoc(doc(db, "requests", id));
@@ -156,18 +155,26 @@ export default function TimikaForm({
     }
   };
 
-  // Start Edit Mode Handler
+  // Start Edit Mode Handler (Restricted to Timika / Admin)
   const startEdit = (e: React.MouseEvent, req: ServiceRequest) => {
     e.stopPropagation();
+    if (!isAuthorized) {
+      alert("Unauthorized: Only Timika personnel can edit requests.");
+      return;
+    }
     setEditingId(req.id);
     setEditDescription(req.description || "");
     setEditPriority(req.priority || PriorityLevel.MEDIUM);
     setEditCategory(req.category || IssueCategory.STRUCTURAL);
   };
 
-  // Save Edit Handler
+  // Save Edit Handler (Restricted to Timika / Admin)
   const handleUpdate = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    if (!isAuthorized) {
+      alert("Unauthorized: Only Timika personnel can update requests.");
+      return;
+    }
     if (!editDescription.trim()) return;
     
     setIsUpdating(true);
@@ -206,6 +213,11 @@ export default function TimikaForm({
     e.preventDefault();
     setSubmitError(null);
 
+    if (!isAuthorized) {
+      setSubmitError("Unauthorized: Only Timika Hub users can submit new service requests.");
+      return;
+    }
+
     if (!containerNumber.trim()) {
       setSubmitError("Container Number is required. Please type the container plate above.");
       return;
@@ -239,31 +251,6 @@ export default function TimikaForm({
         setPhoto(null);
         if (onClearPrefilled) onClearPrefilled();
         onSubmitSuccess();
-      } else {
-        const response = await fetch("/api/requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            containerNumber,
-            priority,
-            category,
-            description,
-            photoUrl: photo,
-            reporterName,
-            destinationLocation,
-          }),
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          setContainerNumber("");
-          setDescription("");
-          setPhoto(null);
-          if (onClearPrefilled) onClearPrefilled();
-          onSubmitSuccess();
-        } else {
-          setSubmitError(data.error || "Failed to submit request.");
-        }
       }
     } catch (err: any) {
       setSubmitError(err.message || "Network error: Could not connect to full-stack server.");
