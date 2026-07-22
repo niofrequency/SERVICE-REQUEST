@@ -152,6 +152,7 @@ export default function AdminProfile({
               onClearPrefilled={onClearPrefilled}
               onNavigateHistory={onNavigateHistory}
               onNavigateInProgress={onNavigateInProgress}
+              onNavigateTab={onNavigateTab}
             />
           </div>
         </div>
