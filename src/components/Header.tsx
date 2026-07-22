@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { LocationTeam } from "../types.js";
 import { HardHat, Wrench, RefreshCw, Layers, Globe, LogOut, UserCheck, Camera } from "lucide-react";
 import { locales } from "../locales.js";
@@ -108,8 +108,8 @@ export default function Header({
               {/* Timezones Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-slate-800 shrink-0" />
 
-              {/* Real-time Timezone Clocks */}
-              <div className="flex items-center space-x-3 bg-slate-900/60 py-1.5 px-3 rounded-lg border border-slate-800/80 text-[11px] font-mono w-fit shrink-0">
+              {/* Real-time Timezone Clocks - Hidden on mobile screens */}
+              <div className="hidden sm:flex items-center space-x-3 bg-slate-900/60 py-1.5 px-3 rounded-lg border border-slate-800/80 text-[11px] font-mono w-fit shrink-0">
                 <div className="text-center border-r border-slate-800 pr-3">
                   <span className="block text-[8px] text-amber-500 uppercase font-bold tracking-wider mb-0.5">
                     {t.clockSurabaya}
