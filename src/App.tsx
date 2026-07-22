@@ -610,7 +610,7 @@ export default function App() {
     }
   };
 
-  // Handle status update with Hard Guard against Base64 Storage Leaks and Admin Revert
+  // Handle status update with Admin Revert support
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -2173,7 +2173,7 @@ export default function App() {
                       <span className="text-sm font-bold font-mono">{list.filter(r => r.status === RequestStatus.DONE).length}</span>
                     </div>
                     <div className="border border-black p-2 bg-gray-50">
-                      <span className="text-[9px] uppercase font-bold text-gray-500 block">Cancelled</span>
+                      <span className="text-[9px] uppercase font-bold text-gray-500, block">Cancelled</span>
                       <span className="text-sm font-bold font-mono">{list.filter(r => r.status === RequestStatus.CANCELLED).length}</span>
                     </div>
                   </div>
