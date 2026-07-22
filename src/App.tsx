@@ -27,7 +27,6 @@ import {
   Filter,
   FileText,
   Trash2,
-  ArrowRight,
   Menu,
   X
 } from "lucide-react";
@@ -158,7 +157,7 @@ export default function App() {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPolling, setIsPolling] = useState(false);
+  const [isPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isRegisteringRef = useRef(false);
 
@@ -1420,7 +1419,6 @@ export default function App() {
           )}
 
           <div className={`space-y-6 ${isLoading ? "blur-sm pointer-events-none opacity-80 select-none" : "animate-fade-in"}`}>
-            {/* Error notification banner */}
             {error && (
               <div className="bg-rose-500/10 border border-rose-500/20 text-rose-800 p-3.5 rounded-xl flex items-center space-x-3 text-xs animate-pulse shadow-sm">
                 <AlertTriangle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
