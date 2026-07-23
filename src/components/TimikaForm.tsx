@@ -201,7 +201,13 @@ export default function TimikaForm({
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
           {/* Box 1: Awaiting Repair */}
           <div
-            onClick={() => onNavigateTab ? onNavigateTab("awaiting") : onNavigateInProgress?.()}
+            onClick={() => {
+              if (onNavigateTab) {
+                onNavigateTab("awaiting");
+              } else {
+                onNavigateInProgress?.();
+              }
+            }}
             className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
@@ -223,7 +229,13 @@ export default function TimikaForm({
 
           {/* Box 2: In Progress */}
           <div
-            onClick={() => onNavigateTab ? onNavigateTab("in-progress") : onNavigateInProgress?.()}
+            onClick={() => {
+              if (onNavigateTab) {
+                onNavigateTab("in-progress");
+              } else {
+                onNavigateInProgress?.();
+              }
+            }}
             className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
@@ -245,7 +257,13 @@ export default function TimikaForm({
 
           {/* Box 3: Completed */}
           <div
-            onClick={() => onNavigateTab ? onNavigateTab("completed") : onNavigateHistory?.()}
+            onClick={() => {
+              if (onNavigateTab) {
+                onNavigateTab("completed");
+              } else {
+                onNavigateHistory?.();
+              }
+            }}
             className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between"
           >
             <div className="space-y-0.5">
