@@ -1,10 +1,13 @@
 // src/components/AdminProfile.tsx
-import React from "react";
+import React, { useState } from "react";
 import { ServiceRequest, LocationTeam, RequestStatus } from "../types.js";
 import TimikaForm from "./TimikaForm.js";
 import SurabayaDashboard from "./SurabayaDashboard.js";
 import JakartaDashboard from "./JakartaDashboard.js";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, FileSpreadsheet, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import * as XLSX from "xlsx";
+import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase.js";
 
 interface AdminProfileProps {
   requests: ServiceRequest[];
@@ -41,6 +44,69 @@ export default function AdminProfile({
   const inProgressCount = requests.filter((r) => r.status === RequestStatus.IN_PROGRESS).length;
   const completedCount = requests.filter((r) => r.status === RequestStatus.DONE).length;
 
+  // VLookup Excel Upload States
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleExcelVLookupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingExcel(true);
+    setUploadMessage(null);
+    setUploadError(null);
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+
+        let updatedCount = 0;
+
+        // Fetch all current Firestore requests
+        const querySnapshot = await getDocs(collection(db, "requests"));
+        const existingDocs = querySnapshot.docs;
+
+        for (const row of data) {
+          // Match columns based on your excel headers: CONTAINER_NUMBER and Location Detail
+          const containerNo = String(row["CONTAINER_NUMBER"] || "").toUpperCase().trim();
+          const newLocationDetail = row["Location Detail"];
+
+          if (!containerNo) continue;
+
+          // Find matching document in Firestore by container number
+          const matchedDoc = existingDocs.find(d => {
+            const docData = d.data();
+            return docData.containerNumber?.toUpperCase().trim() === containerNo;
+          });
+
+          if (matchedDoc) {
+            const docRef = doc(db, "requests", matchedDoc.id);
+            await updateDoc(docRef, {
+              locationDetail: newLocationDetail,
+              updatedAt: new Date().toISOString()
+            });
+            updatedCount++;
+          }
+        }
+
+        setUploadMessage(`Successfully synced and updated locations for ${updatedCount} container units via VLookup!`);
+      } catch (err: any) {
+        setUploadError(`VLookup sync failed: ${err.message}`);
+      } finally {
+        setIsUploadingExcel(false);
+        // Reset file input
+        e.target.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="space-y-6">
       <div className="relative border-b border-slate-200 pb-3 flex items-center justify-between text-[11px] font-mono">
@@ -54,6 +120,45 @@ export default function AdminProfile({
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
         </span>
       </div>
+
+      {/* Bulk VLookup Excel Upload Widget for Admin */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <FileSpreadsheet className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-xs font-mono font-extrabold text-slate-900 uppercase tracking-wider">
+              Bulk VLookup Location Sync (Excel Import)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Drop or upload movement spreadsheets (e.g. Reefer Movement PSU and PRIMO) to instantly update unit locations.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <label className={`flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm ${isUploadingExcel ? "opacity-50 pointer-events-none" : ""}`}>
+            <Upload className="h-4 w-4" />
+            <span>{isUploadingExcel ? "Processing..." : "Upload Excel (.xlsx)"}</span>
+            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelVLookupUpload} className="hidden" disabled={isUploadingExcel} />
+          </label>
+        </div>
+      </div>
+
+      {uploadMessage && (
+        <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{uploadMessage}</span>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-xs font-semibold flex items-center space-x-2">
+          <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+          <span>{uploadError}</span>
+        </div>
+      )}
 
       {/* Interactive Flow-Chart Pipeline Layout (Single Horizontal Row) */}
       <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
