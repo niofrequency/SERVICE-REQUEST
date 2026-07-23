@@ -1,332 +1,255 @@
-import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
-import { 
-  MapPin, 
-  Upload, 
-  Search, 
-  AlertTriangle, 
-  Database, 
-  FileSpreadsheet, 
-  ShieldCheck,
-  RefreshCw 
-} from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  collection, 
-  getDocs, 
-  writeBatch 
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { FleetItem, RepairItem } from '../types/fleet';
+// src/components/LocationTab.tsx
+import React, { useState, useEffect } from "react";
+import { FileSpreadsheet, Upload, CheckCircle2, AlertTriangle, Database, Loader2 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { doc, updateDoc, collection, getDocs, setDoc, getDoc } from "firebase/firestore";
+import { db } from "../firebase.js";
+import { RequestStatus } from "../types.js";
 
 interface LocationTabProps {
-  currentUserEmail: string;
+  isAdmin: boolean;
 }
 
-export const LocationTab: React.FC<LocationTabProps> = ({ currentUserEmail }) => {
-  const isAdmin = currentUserEmail === 'mpigome44@gmail.com';
+export default function LocationTab({ isAdmin }: LocationTabProps) {
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  
+  const [fleetData, setFleetData] = useState<any[]>([]);
+  const [isLoadingFleet, setIsLoadingFleet] = useState(true);
+  const [showFleet, setShowFleet] = useState(true);
 
-  const [fleetData, setFleetData] = useState<FleetItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [syncing, setSyncing] = useState<boolean>(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const fetchFleetData = async () => {
-    setLoading(true);
-    try {
-      const docRef = doc(db, 'app_data', 'fleet_inventory');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data && Array.isArray(data.items)) {
-          setFleetData(data.items);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching fleet inventory:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Fetch the global fleet data from Firestore so everyone can see it
   useEffect(() => {
+    const fetchFleetData = async () => {
+      try {
+        const fleetDoc = await getDoc(doc(db, "app_data", "fleet_inventory"));
+        if (fleetDoc.exists()) {
+          setFleetData(fleetDoc.data().items || []);
+        }
+      } catch (error) {
+        console.error("Error fetching fleet data:", error);
+      } finally {
+        setIsLoadingFleet(false);
+      }
+    };
     fetchFleetData();
   }, []);
 
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleExcelVLookupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setSyncing(true);
+    setIsUploadingExcel(true);
     setUploadMessage(null);
+    setUploadError(null);
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
-        const workbook = XLSX.read(bstr, { type: 'binary' });
-        const wsname = workbook.SheetNames[0];
-        const ws = workbook.Sheets[wsname];
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
         
-        // Convert to array of arrays to find the actual header row dynamically
+        // Convert to array of arrays to dynamically locate the actual table header row (skipping metadata title rows)
         const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
-        
         let headerRowIndex = 0;
         for (let i = 0; i < rows.length; i++) {
-          const rowStr = JSON.stringify(rows[i]);
-          if (rowStr.includes('CONTAINER_NUMBER')) {
+          const rowValues = rows[i].map(val => String(val || "").trim());
+          if (rowValues.includes("CONTAINER_NUMBER")) {
             headerRowIndex = i;
             break;
           }
         }
 
-        // Re-parse sheet starting from the correct header row
-        const rawData = XLSX.utils.sheet_to_json<FleetItem>(ws, { range: headerRowIndex });
+        // Re-parse sheet starting precisely from the detected header row
+        const data: any[] = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex });
 
-        if (!rawData || rawData.length === 0) {
-          throw new Error('Spreadsheet contains no valid records after the header row.');
+        if (!data || data.length === 0) {
+          throw new Error("Spreadsheet contains no valid container rows after the header.");
         }
 
-        // 1. Save global inventory JSON array to Firestore
-        const fleetDocRef = doc(db, 'app_data', 'fleet_inventory');
-        await setDoc(fleetDocRef, { 
-          items: rawData, 
-          updatedAt: new Date().toISOString(),
-          updatedBy: currentUserEmail 
-        });
+        let updatedCount = 0;
 
-        // 2. Perform Automated VLookup & Status Guardrail on Repair Pipelines
-        const repairsRef = collection(db, 'repairs');
-        const repairSnap = await getDocs(repairsRef);
-        const batch = writeBatch(db);
-        let updateCount = 0;
+        // Fetch all current Firestore requests to update WAITING containers only
+        const querySnapshot = await getDocs(collection(db, "requests"));
+        const existingDocs = querySnapshot.docs;
 
-        const locationMap = new Map<string, string>();
-        rawData.forEach((row) => {
-          const containerNo = String(row.CONTAINER_NUMBER || '').trim().toUpperCase();
-          const locationDetail = String(row['Location Detail'] || row.location_detail || '').trim();
-          if (containerNo) {
-            locationMap.set(containerNo, locationDetail);
+        for (const row of data) {
+          const containerNo = String(row["CONTAINER_NUMBER"] || "").toUpperCase().trim();
+          const newLocationDetail = row["Location Detail"] || row["location_detail"];
+
+          if (!containerNo) continue;
+
+          // MATCH CONDITION: Find document by container number AND ensure it is in WAITING status
+          const matchedDoc = existingDocs.find(d => {
+            const docData = d.data();
+            return (
+              docData.containerNumber?.toUpperCase().trim() === containerNo &&
+              docData.status === RequestStatus.WAITING
+            );
+          });
+
+          if (matchedDoc) {
+            const docRef = doc(db, "requests", matchedDoc.id);
+            await updateDoc(docRef, {
+              locationDetail: newLocationDetail, 
+              updatedAt: new Date().toISOString()
+            });
+            updatedCount++;
           }
+        }
+
+        // Save the parsed JSON to Firestore so everyone can view the updated Fleet List
+        await setDoc(doc(db, "app_data", "fleet_inventory"), {
+          items: data,
+          lastUpdated: new Date().toISOString()
         });
-
-        repairSnap.forEach((repairDoc) => {
-          const repairData = repairDoc.data() as RepairItem;
-          const containerNum = String(repairData.containerNumber || '').trim().toUpperCase();
-          const currentStatus = repairData.status;
-
-          if (currentStatus === 'WAITING' && locationMap.has(containerNum)) {
-            const newLocation = locationMap.get(containerNum);
-            batch.update(repairDoc.ref, { locationDetail: newLocation });
-            updateCount++;
-          }
-        });
-
-        await batch.commit();
-
-        setFleetData(rawData);
-        setUploadMessage({ 
-          type: 'success', 
-          text: `Successfully synced inventory matrix! Updated ${updateCount} active 'WAITING' repair pipeline records.` 
-        });
-      } catch (error: any) {
-        console.error('Error processing spreadsheet:', error);
-        setUploadMessage({ type: 'error', text: `Failed to process file: ${error.message}` });
+        
+        setFleetData(data);
+        setShowFleet(true);
+        setUploadMessage(`Successfully synced and updated locations for ${updatedCount} container(s) currently awaiting repair.`);
+      } catch (err: any) {
+        setUploadError(`VLookup sync failed: ${err.message}`);
       } finally {
-        setSyncing(false);
-        e.target.value = '';
+        setIsUploadingExcel(false);
+        e.target.value = ""; // Reset file input
       }
     };
-
     reader.readAsBinaryString(file);
   };
 
-  const filteredFleet = useMemo(() => {
-    return fleetData.filter((item) => {
-      const containerNo = String(item.CONTAINER_NUMBER || '').toLowerCase();
-      const matchesSearch = containerNo.includes(searchTerm.toLowerCase()) || 
-                            String(item.Mfg || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'ALL' || String(item.Location_Category || '') === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [fleetData, searchTerm, selectedCategory]);
-
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    fleetData.forEach((item) => {
-      if (item.Location_Category) cats.add(String(item.Location_Category));
-    });
-    return Array.from(cats);
-  }, [fleetData]);
-
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm uppercase tracking-wider">
-            <MapPin className="w-4 h-4" /> Port Connect Infrastructure
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Fleet Location & VLookup Inventory Sync</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Real-time tracking and automated movement report synchronization across Timika, Surabaya, and Jakarta hubs.
-          </p>
-        </div>
-
-        <button 
-          onClick={fetchFleetData} 
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors shadow-xs"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-12">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
+          <Database className="h-6 w-6 text-indigo-600" />
+          <span>FLEET LOCATION DATABASE</span>
+        </h2>
       </div>
 
-      {isAdmin ? (
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md border border-slate-700 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
-              <FileSpreadsheet className="w-6 h-6" />
+      {/* ADMIN-ONLY UPLOAD CONTROLS */}
+      {isAdmin && (
+        <>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                <FileSpreadsheet className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  Bulk VLookup Location Sync (Admin Control)
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload movement spreadsheets to sync warehouse/hub locations globally. <br/>
+                  <span className="font-bold text-amber-600">Note: Only containers in 'AWAITING' status will have their active repair logs updated.</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                Admin Movement Spreadsheet Importer
-                <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-400/30 flex items-center gap-1 font-normal">
-                  <ShieldCheck className="w-3 h-3" /> Admin Authorized
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400">Upload REEFER MOVEMENT (.xlsx, .xls) files directly. Auto-detects table headers.</p>
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-            <label className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl cursor-pointer transition-all shadow-sm ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <Upload className="w-4 h-4" />
-              {syncing ? 'Processing & Syncing...' : 'Upload Movement Report'}
-              <input 
-                type="file" 
-                accept=".xlsx, .xls, .csv" 
-                className="hidden" 
-                onChange={handleFileUpload} 
-                disabled={syncing}
-              />
-            </label>
-            <div className="text-xs text-slate-400">
-              * Guardrail Active: Automatically syncs location details exclusively for containers in <span className="text-amber-400 font-semibold">WAITING</span> status.
+            <div className="flex items-center gap-3 shrink-0">
+              {fleetData.length > 0 && (
+                <button
+                  onClick={() => setShowFleet(!showFleet)}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-indigo-200 cursor-pointer"
+                >
+                  <Database className="h-4 w-4" />
+                  <span>{showFleet ? "HIDE FLEET DATA" : "VIEW FLEET DATA"}</span>
+                </button>
+              )}
+              <label className={`flex items-center space-x-2 px-5 py-2.5 bg-[#00966A] hover:bg-[#007A55] text-white rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm ${isUploadingExcel ? "opacity-50 pointer-events-none" : ""}`}>
+                {isUploadingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <span>{isUploadingExcel ? "PROCESSING..." : "UPLOAD EXCEL"}</span>
+                <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelVLookupUpload} className="hidden" disabled={isUploadingExcel} />
+              </label>
             </div>
           </div>
 
           {uploadMessage && (
-            <div className={`p-4 rounded-xl text-sm flex items-center gap-2 ${uploadMessage.type === 'success' ? 'bg-emerald-900/50 text-emerald-200 border border-emerald-500/30' : 'bg-rose-900/50 text-rose-200 border border-rose-500/30'}`}>
-              {uploadMessage.type === 'success' ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
-              {uploadMessage.text}
+            <div className="p-4 bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] rounded-xl text-sm font-medium flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5 text-[#059669] shrink-0" />
+              <span>{uploadMessage}</span>
             </div>
           )}
-        </div>
-      ) : (
-        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center gap-3 text-amber-800 text-sm">
-          <ShieldCheck className="w-5 h-5 shrink-0 text-amber-600" />
-          <span><strong>Read-Only Mode:</strong> File upload capabilities are restricted to system administrators.</span>
-        </div>
+
+          {uploadError && (
+            <div className="p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm font-medium flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+        </>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search Container No or Mfg..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <span className="text-xs text-slate-500 font-medium">Category:</span>
-            <select 
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
+      {/* Fleet Inventory Table Section - Visible to EVERYONE */}
+      {isLoadingFleet ? (
+        <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+          <p className="text-xs font-mono uppercase tracking-widest">Loading Global Fleet Data...</p>
         </div>
-
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
-              <p className="text-sm font-medium">Loading company fleet database...</p>
+      ) : showFleet && fleetData.length > 0 ? (
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm animate-in fade-in duration-300">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-2">
+                <Database className="h-4 w-4 text-indigo-500" />
+                <span>Company Fleet Database</span>
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1 uppercase">Showing {fleetData.length} total active units from latest sheet</p>
             </div>
-          ) : filteredFleet.length === 0 ? (
-            <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-              <Database className="w-8 h-8 text-slate-300" />
-              <p className="text-sm font-medium">No fleet inventory records found.</p>
-              <p className="text-xs text-slate-400">Admin must upload a valid movement report spreadsheet to initialize database.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
+          </div>
+          
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-slate-100/70 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  <th className="py-3 px-4">No</th>
-                  <th className="py-3 px-4">Container Number</th>
-                  <th className="py-3 px-4">Mfg</th>
-                  <th className="py-3 px-4">Gas Type</th>
-                  <th className="py-3 px-4">Voyage No</th>
-                  <th className="py-3 px-4">Date To</th>
-                  <th className="py-3 px-4">Diff Day</th>
-                  <th className="py-3 px-4">Product</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Location Detail</th>
+                <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  <th className="p-3 border-b border-slate-200">No</th>
+                  <th className="p-3 border-b border-slate-200">Container Number</th>
+                  <th className="p-3 border-b border-slate-200">Mfg</th>
+                  <th className="p-3 border-b border-slate-200">Gas Type</th>
+                  <th className="p-3 border-b border-slate-200">Voyage No</th>
+                  <th className="p-3 border-b border-slate-200">Date To</th>
+                  <th className="p-3 border-b border-slate-200">Diff Day</th>
+                  <th className="p-3 border-b border-slate-200">Product</th>
+                  <th className="p-3 border-b border-slate-200">Location Category</th>
+                  <th className="p-3 border-b border-slate-200">Location Detail</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 text-sm text-slate-700">
-                {filteredFleet.map((item, idx) => {
-                  const diffDayNum = Number(item["Diff Day"]) || 0;
-                  const isHighDiff = diffDayNum > 50;
+              <tbody className="text-xs text-slate-700">
+                {fleetData.map((row, idx) => {
+                  const diffDay = Number(row["Diff Day"]);
+                  const isHighDiff = !isNaN(diffDay) && diffDay > 50;
 
                   return (
-                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 text-slate-500">{item.NO || idx + 1}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900 font-mono">{item.CONTAINER_NUMBER || '-'}</td>
-                      <td className="py-3 px-4">{String(item.Mfg || '-')}</td>
-                      <td className="py-3 px-4">{item.GAS_TYPE || '-'}</td>
-                      <td className="py-3 px-4 font-mono text-xs">{item.VOYAGE_NO || '-'}</td>
-                      <td className="py-3 px-4 text-xs">{String(item.DATE_TO || '-')}</td>
-                      <td className="py-3 px-4 font-mono">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${isHighDiff ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-700'}`}>
-                          {isHighDiff && <AlertTriangle className="w-3 h-3 text-rose-600" />}
-                          {item["Diff Day"] ?? '-'}
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-mono text-slate-400">{row["NO"] || idx + 1}</td>
+                      <td className="p-3 font-bold text-slate-900">{row["CONTAINER_NUMBER"] || "-"}</td>
+                      <td className="p-3">{String(row["Mfg"] || "-")}</td>
+                      <td className="p-3">{row["GAS_TYPE"] || "-"}</td>
+                      <td className="p-3 text-[11px] truncate max-w-[150px]">{row["VOYAGE_NO"] || "-"}</td>
+                      <td className="p-3">{String(row["DATE_TO"] || "-")}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-md font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {row["Diff Day"] ?? "0"}
                         </span>
                       </td>
-                      <td className="py-3 px-4">{item.Product_ || '-'}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-100">
-                          {item.Location_Category || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-medium text-slate-900">{item["Location Detail"] || item.location_detail || '-'}</td>
+                      <td className="p-3">{row["Product_"] || "-"}</td>
+                      <td className="p-3">{row["Location_Category"] || "-"}</td>
+                      <td className="p-3 font-mono text-[10px] text-blue-700 bg-blue-50/50">{row["Location Detail"] || row["location_detail"] || "-"}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
-
-        <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex justify-between items-center text-xs text-slate-500">
-          <span>Showing {filteredFleet.length} of {fleetData.length} total units</span>
-          <span className="font-medium text-slate-600">PT. Panjasa-Intradin Port Connect Infrastructure</span>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4 border-2 border-dashed border-slate-200 rounded-2xl">
+          <Database className="h-8 w-8 text-slate-300" />
+          <p className="text-xs font-mono uppercase tracking-widest">No Fleet Data Uploaded Yet</p>
         </div>
-      </div>
+      )}
     </div>
   );
-};
+}
