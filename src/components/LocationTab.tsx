@@ -1,6 +1,13 @@
-// src/components/LocationTab.tsx
-import React, { useState, useEffect, useMemo } from "react";
-import { Database, Loader2, Search, Filter } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { 
+  Database, 
+  Loader2, 
+  Search, 
+  Filter, 
+  ArrowDownAZ, 
+  ArrowUpZA, 
+  X
+} from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 
@@ -12,9 +19,16 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   const [fleetData, setFleetData] = useState<any[]>([]);
   const [isLoadingFleet, setIsLoadingFleet] = useState(true);
   
-  // Global search and column-specific filter states
+  // Global search
   const [searchTerm, setSearchTerm] = useState("");
-  const [colFilters, setColFilters] = useState<Record<string, string>>({});
+  
+  // Excel-style States
+  const [colWidths, setColWidths] = useState<Record<string, string>>({});
+  const [colFilters, setColFilters] = useState<Record<string, string[]>>({});
+  const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc' | 'desc' } | null>(null);
+  
+  // Active Filter Dropdown State
+  const [activeFilterDropdown, setActiveFilterDropdown] = useState<string | null>(null);
 
   const fetchFleetData = async () => {
     setIsLoadingFleet(true);
@@ -50,18 +64,17 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return dateStr;
   };
 
-  // Update specific column filter
-  const handleColFilterChange = (column: string, value: string) => {
-    setColFilters(prev => ({
-      ...prev,
-      [column]: value
-    }));
+  const getFormattedValue = (row: any, colKey: string) => {
+    if (colKey === "Location Detail") return String(row["Location Detail"] || row["location_detail"] || "");
+    if (colKey === "Mfg" || colKey === "DATE_TO") return formatDate(String(row[colKey] || ""));
+    if (colKey === "NO") return String(row["NO"] || "");
+    return String(row[colKey] || "");
   };
 
-  // Filter fleet inventory based on global search AND individual column filters
+  // 1. Process Global Search & Column Filters
   const filteredFleet = useMemo(() => {
     return fleetData.filter(row => {
-      // 1. Process Global Search
+      // Global Search
       let matchesGlobal = true;
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
@@ -69,22 +82,12 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         matchesGlobal = rowValues.some(val => val.includes(term));
       }
 
-      // 2. Process Excel-like Column Filters
+      // Column Checkbox Filters
       let matchesColumns = true;
-      for (const [colKey, filterVal] of Object.entries(colFilters)) {
-        if (filterVal.trim() !== "") {
-          let cellVal = "";
-          
-          // Handle specific column mapping safely
-          if (colKey === "Location Detail") {
-            cellVal = String(row["Location Detail"] || row["location_detail"] || "");
-          } else if (colKey === "Mfg" || colKey === "DATE_TO") {
-            cellVal = formatDate(String(row[colKey] || ""));
-          } else {
-            cellVal = String(row[colKey] || "");
-          }
-
-          if (!cellVal.toLowerCase().includes(filterVal.toLowerCase())) {
+      for (const [colKey, selectedValues] of Object.entries(colFilters)) {
+        if (selectedValues && selectedValues.length > 0) {
+          const cellVal = getFormattedValue(row, colKey);
+          if (!selectedValues.includes(cellVal)) {
             matchesColumns = false;
             break; 
           }
@@ -95,9 +98,162 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     });
   }, [fleetData, searchTerm, colFilters]);
 
+  // 2. Process Sorting
+  const sortedFleet = useMemo(() => {
+    let result = [...filteredFleet];
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const valA = getFormattedValue(a, sortConfig.key).toLowerCase();
+        const valB = getFormattedValue(b, sortConfig.key).toLowerCase();
+        if (valA < valB) return sortConfig.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [filteredFleet, sortConfig]);
+
+  // Double-Click Column Resizer handler
+  const handleDoubleClickResize = (colKey: string) => {
+    setColWidths(prev => ({
+      ...prev,
+      [colKey]: "max-content" // Forces HTML table column to perfectly snap to its content width
+    }));
+  };
+
+  const columns = [
+    { key: "NO", label: "No" },
+    { key: "CONTAINER_NUMBER", label: "Container Number" },
+    { key: "Mfg", label: "Mfg" },
+    { key: "GAS_TYPE", label: "Gas Type" },
+    { key: "VOYAGE_NO", label: "Voyage No" },
+    { key: "DATE_TO", label: "Date To" },
+    { key: "Diff Day", label: "Diff Day" },
+    { key: "Product_", label: "Product" },
+    { key: "Location_Category", label: "Location Category" },
+    { key: "Location Detail", label: "Location Detail" }
+  ];
+
+  // Component for the Excel Dropdown Menu
+  const ExcelFilterDropdown = ({ colKey, label }: { colKey: string, label: string }) => {
+    const [localSearch, setLocalSearch] = useState("");
+    
+    // Get all unique values for this column from the raw data
+    const allUniqueValues = useMemo(() => {
+      const values = new Set(fleetData.map(row => getFormattedValue(row, colKey)));
+      return Array.from(values).sort();
+    }, [fleetData, colKey]);
+
+    const activeSelections = colFilters[colKey] || [];
+    const isAllSelected = activeSelections.length === 0 || activeSelections.length === allUniqueValues.length;
+
+    // Local state for checkboxes while the dropdown is open (before hitting OK)
+    const [tempSelections, setTempSelections] = useState<string[]>(isAllSelected ? allUniqueValues : activeSelections);
+
+    const filteredOptions = allUniqueValues.filter(val => val.toLowerCase().includes(localSearch.toLowerCase()));
+
+    const handleSort = (dir: 'asc' | 'desc') => {
+      setSortConfig({ key: colKey, dir });
+      setActiveFilterDropdown(null);
+    };
+
+    const handleApply = () => {
+      if (tempSelections.length === allUniqueValues.length) {
+        // If all are selected, clear the filter to save logic
+        const newFilters = { ...colFilters };
+        delete newFilters[colKey];
+        setColFilters(newFilters);
+      } else {
+        setColFilters({ ...colFilters, [colKey]: tempSelections });
+      }
+      setActiveFilterDropdown(null);
+    };
+
+    const handleClear = () => {
+      const newFilters = { ...colFilters };
+      delete newFilters[colKey];
+      setColFilters(newFilters);
+      setSortConfig(null);
+      setActiveFilterDropdown(null);
+    };
+
+    const toggleSelection = (val: string) => {
+      setTempSelections(prev => 
+        prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+      );
+    };
+
+    const toggleAll = () => {
+      if (tempSelections.length === filteredOptions.length) {
+        setTempSelections([]);
+      } else {
+        setTempSelections([...filteredOptions]);
+      }
+    };
+
+    return (
+      <div 
+        className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-lg z-50 text-slate-700 font-sans"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex flex-col p-2 space-y-1 border-b border-slate-100">
+          <button onClick={() => handleSort('asc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
+            <ArrowDownAZ className="w-4 h-4 mr-2 text-slate-400" /> Sort A to Z
+          </button>
+          <button onClick={() => handleSort('desc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
+            <ArrowUpZA className="w-4 h-4 mr-2 text-slate-400" /> Sort Z to A
+          </button>
+          <button onClick={handleClear} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold text-rose-600 rounded cursor-pointer transition-colors">
+            <X className="w-4 h-4 mr-2" /> Clear Filter
+          </button>
+        </div>
+        
+        <div className="p-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
+              className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded focus:border-indigo-500 outline-none"
+            />
+          </div>
+
+          <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 p-2 rounded bg-slate-50">
+            <label className="flex items-center space-x-2 text-xs cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={tempSelections.length === filteredOptions.length && filteredOptions.length > 0} 
+                onChange={toggleAll}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <span className="font-bold">(Select All)</span>
+            </label>
+            {filteredOptions.map((opt, i) => (
+              <label key={i} className="flex items-center space-x-2 text-xs cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={tempSelections.includes(opt)}
+                  onChange={() => toggleSelection(opt)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="truncate">{opt === "" ? "(Blanks)" : opt}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button onClick={() => setActiveFilterDropdown(null)} className="px-3 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
+            <button onClick={handleApply} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors cursor-pointer">OK</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    // Removed max-w constraints to stretch full width like the History tab
-    <div className="space-y-6 w-full pb-12">
+    <div className="space-y-6 w-full pb-32" onClick={() => setActiveFilterDropdown(null)}>
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-4">
         <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
           <Database className="h-6 w-6 text-indigo-600" />
@@ -111,7 +267,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-6 relative">
         
         {/* Top Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -125,11 +281,11 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
             </p>
           </div>
           <div className="bg-slate-100 text-slate-600 font-mono text-xs px-3 py-1.5 rounded-md border border-slate-200 font-bold whitespace-nowrap">
-            {filteredFleet.length} Records Found
+            {sortedFleet.length} Records Found
           </div>
         </div>
 
-        {/* Global Search Bar (Stretched) */}
+        {/* Global Search Bar */}
         <div className="flex flex-col md:flex-row items-center w-full border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white shadow-sm">
           <div className="pl-4 py-3 hidden md:block">
             <Search className="h-5 w-5 text-slate-400" />
@@ -149,58 +305,72 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
             <p className="text-xs font-mono uppercase tracking-widest">Loading Global Fleet Data...</p>
           </div>
-        ) : filteredFleet.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
+        ) : sortedFleet.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 min-h-[400px]">
+            <table className="w-full text-left border-collapse whitespace-nowrap table-fixed md:table-auto">
               <thead>
-                {/* Column Titles */}
-                <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono">
-                  <th className="p-3 border-b border-slate-200">No</th>
-                  <th className="p-3 border-b border-slate-200">Container Number</th>
-                  <th className="p-3 border-b border-slate-200">Mfg</th>
-                  <th className="p-3 border-b border-slate-200">Gas Type</th>
-                  <th className="p-3 border-b border-slate-200">Voyage No</th>
-                  <th className="p-3 border-b border-slate-200">Date To</th>
-                  <th className="p-3 border-b border-slate-200">Diff Day</th>
-                  <th className="p-3 border-b border-slate-200">Product</th>
-                  <th className="p-3 border-b border-slate-200">Location Category</th>
-                  <th className="p-3 border-b border-slate-200">Location Detail</th>
-                </tr>
-                {/* Excel-Style Column Filter Inputs */}
-                <tr className="bg-slate-100/50 border-b border-slate-200">
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("NO", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("CONTAINER_NUMBER", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("Mfg", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("GAS_TYPE", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("VOYAGE_NO", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("DATE_TO", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("Diff Day", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("Product_", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("Location_Category", e.target.value)} /></th>
-                  <th className="px-2 py-1"><input type="text" placeholder="Filter..." className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded outline-none focus:border-indigo-400 bg-white" onChange={(e) => handleColFilterChange("Location Detail", e.target.value)} /></th>
+                <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono select-none">
+                  {columns.map((col) => {
+                    const isFiltered = !!colFilters[col.key];
+                    const isSorted = sortConfig?.key === col.key;
+                    
+                    return (
+                      <th 
+                        key={col.key} 
+                        className="p-3 border-b border-slate-200 relative group"
+                        style={{ width: colWidths[col.key] || 'auto' }}
+                      >
+                        <div className="flex items-center justify-between space-x-2">
+                          <span className="truncate">{col.label}</span>
+                          
+                          {/* Excel Filter Icon */}
+                          <div 
+                            className={`p-1 rounded hover:bg-slate-200 cursor-pointer transition-colors ${isFiltered || isSorted ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFilterDropdown(activeFilterDropdown === col.key ? null : col.key);
+                            }}
+                          >
+                            <Filter className="w-3 h-3" />
+                          </div>
+                        </div>
+
+                        {/* Excel Dropdown Popover */}
+                        {activeFilterDropdown === col.key && (
+                          <ExcelFilterDropdown colKey={col.key} label={col.label} />
+                        )}
+
+                        {/* Invisible double-click resizer line (Excel behavior) */}
+                        <div 
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400/50"
+                          onDoubleClick={() => handleDoubleClickResize(col.key)}
+                        />
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="text-xs text-slate-700">
-                {filteredFleet.map((row, idx) => {
+                {sortedFleet.map((row, idx) => {
                   const diffDay = Number(row["Diff Day"]);
                   const isHighDiff = !isNaN(diffDay) && diffDay > 50;
 
                   return (
                     <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3 font-mono text-slate-400">{row["NO"] || idx + 1}</td>
-                      <td className="p-3 font-bold text-slate-900">{row["CONTAINER_NUMBER"] || "-"}</td>
-                      <td className="p-3">{formatDate(String(row["Mfg"] || "-"))}</td>
-                      <td className="p-3">{row["GAS_TYPE"] || "-"}</td>
+                      <td className="p-3 font-mono text-slate-400 truncate">{row["NO"] || idx + 1}</td>
+                      <td className="p-3 font-bold text-slate-900 truncate">{row["CONTAINER_NUMBER"] || "-"}</td>
+                      <td className="p-3 truncate">{formatDate(String(row["Mfg"] || "-"))}</td>
+                      <td className="p-3 truncate">{row["GAS_TYPE"] || "-"}</td>
                       <td className="p-3 text-[11px] truncate max-w-[150px]">{row["VOYAGE_NO"] || "-"}</td>
-                      <td className="p-3">{formatDate(String(row["DATE_TO"] || "-"))}</td>
-                      <td className="p-3">
+                      <td className="p-3 truncate">{formatDate(String(row["DATE_TO"] || "-"))}</td>
+                      <td className="p-3 truncate">
                         <span className={`px-2 py-1 rounded-md font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                           {row["Diff Day"] ?? "0"}
                         </span>
                       </td>
-                      <td className="p-3">{row["Product_"] || "-"}</td>
-                      <td className="p-3">{row["Location_Category"] || "-"}</td>
-                      <td className="p-3 font-mono text-[10px] text-blue-700 bg-blue-50/50">{row["Location Detail"] || row["location_detail"] || "-"}</td>
+                      <td className="p-3 truncate">{row["Product_"] || "-"}</td>
+                      <td className="p-3 truncate">{row["Location_Category"] || "-"}</td>
+                      <td className="p-3 font-mono text-[10px] text-blue-700 bg-blue-50/50 truncate">{row["Location Detail"] || row["location_detail"] || "-"}</td>
                     </tr>
                   );
                 })}
