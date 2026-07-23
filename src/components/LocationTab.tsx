@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+// src/components/LocationTab.tsx
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Database, 
   Loader2, 
@@ -22,12 +23,9 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   // Global search
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Excel-style States
-  const [colWidths, setColWidths] = useState<Record<string, string>>({});
+  // States
   const [colFilters, setColFilters] = useState<Record<string, string[]>>({});
   const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc' | 'desc' } | null>(null);
-  
-  // Active Filter Dropdown State
   const [activeFilterDropdown, setActiveFilterDropdown] = useState<string | null>(null);
 
   const fetchFleetData = async () => {
@@ -71,7 +69,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return String(row[colKey] || "");
   };
 
-  // 1. Process Global Search & Column Filters
+  // 1. Process Global Search & Column Checkbox Filters safely
   const filteredFleet = useMemo(() => {
     return fleetData.filter(row => {
       // Global Search
@@ -82,7 +80,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         matchesGlobal = rowValues.some(val => val.includes(term));
       }
 
-      // Column Checkbox Filters
+      // Column Checkbox Filters (Safe check: if filter array exists and is populated, item must match)
       let matchesColumns = true;
       for (const [colKey, selectedValues] of Object.entries(colFilters)) {
         if (selectedValues && selectedValues.length > 0) {
@@ -113,42 +111,33 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return result;
   }, [filteredFleet, sortConfig]);
 
-  // Double-Click Column Resizer handler
-  const handleDoubleClickResize = (colKey: string) => {
-    setColWidths(prev => ({
-      ...prev,
-      [colKey]: "max-content" // Forces HTML table column to perfectly snap to its content width
-    }));
-  };
-
+  // Column definitions with compact sizing rules for columns like Gas Type
   const columns = [
-    { key: "NO", label: "No" },
-    { key: "CONTAINER_NUMBER", label: "Container Number" },
-    { key: "Mfg", label: "Mfg" },
-    { key: "GAS_TYPE", label: "Gas Type" },
-    { key: "VOYAGE_NO", label: "Voyage No" },
-    { key: "DATE_TO", label: "Date To" },
-    { key: "Diff Day", label: "Diff Day" },
-    { key: "Product_", label: "Product" },
-    { key: "Location_Category", label: "Location Category" },
-    { key: "Location Detail", label: "Location Detail" }
+    { key: "NO", label: "No", className: "w-16" },
+    { key: "CONTAINER_NUMBER", label: "Container Number", className: "w-44" },
+    { key: "Mfg", label: "Mfg", className: "w-32" },
+    { key: "GAS_TYPE", label: "Gas Type", className: "w-28" }, // Fixed excess width
+    { key: "VOYAGE_NO", label: "Voyage No", className: "w-56" },
+    { key: "DATE_TO", label: "Date To", className: "w-32" },
+    { key: "Diff Day", label: "Diff Day", className: "w-24" },
+    { key: "Product_", label: "Product", className: "w-32" },
+    { key: "Location_Category", label: "Location Category", className: "w-40" },
+    { key: "Location Detail", label: "Location Detail", className: "w-40" }
   ];
 
   // Component for the Excel Dropdown Menu
-  const ExcelFilterDropdown = ({ colKey, label }: { colKey: string, label: string }) => {
+  const ExcelFilterDropdown = ({ colKey }: { colKey: string }) => {
     const [localSearch, setLocalSearch] = useState("");
     
-    // Get all unique values for this column from the raw data
     const allUniqueValues = useMemo(() => {
       const values = new Set(fleetData.map(row => getFormattedValue(row, colKey)));
       return Array.from(values).sort();
     }, [fleetData, colKey]);
 
-    const activeSelections = colFilters[colKey] || [];
-    const isAllSelected = activeSelections.length === 0 || activeSelections.length === allUniqueValues.length;
-
-    // Local state for checkboxes while the dropdown is open (before hitting OK)
-    const [tempSelections, setTempSelections] = useState<string[]>(isAllSelected ? allUniqueValues : activeSelections);
+    const activeSelections = colFilters[colKey];
+    // If undefined or null, default to having everything checked
+    const isInitialState = !activeSelections;
+    const [tempSelections, setTempSelections] = useState<string[]>(isInitialState ? allUniqueValues : activeSelections);
 
     const filteredOptions = allUniqueValues.filter(val => val.toLowerCase().includes(localSearch.toLowerCase()));
 
@@ -159,7 +148,6 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
     const handleApply = () => {
       if (tempSelections.length === allUniqueValues.length) {
-        // If all are selected, clear the filter to save logic
         const newFilters = { ...colFilters };
         delete newFilters[colKey];
         setColFilters(newFilters);
@@ -193,7 +181,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
     return (
       <div 
-        className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-lg z-50 text-slate-700 font-sans"
+        className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-lg z-50 text-slate-700 font-sans text-left"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex flex-col p-2 space-y-1 border-b border-slate-100">
@@ -307,20 +295,19 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
           </div>
         ) : sortedFleet.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-slate-200 min-h-[400px]">
-            <table className="w-full text-left border-collapse whitespace-nowrap table-fixed md:table-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap table-auto">
               <thead>
                 <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono select-none">
                   {columns.map((col) => {
-                    const isFiltered = !!colFilters[col.key];
+                    const isFiltered = !!colFilters[col.key] && colFilters[col.key].length > 0;
                     const isSorted = sortConfig?.key === col.key;
                     
                     return (
                       <th 
                         key={col.key} 
-                        className="p-3 border-b border-slate-200 relative group"
-                        style={{ width: colWidths[col.key] || 'auto' }}
+                        className={`p-3 border-b border-slate-200 relative group ${col.className}`}
                       >
-                        <div className="flex items-center justify-between space-x-2">
+                        <div className="flex items-center justify-between space-x-1">
                           <span className="truncate">{col.label}</span>
                           
                           {/* Excel Filter Icon */}
@@ -337,14 +324,8 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
                         {/* Excel Dropdown Popover */}
                         {activeFilterDropdown === col.key && (
-                          <ExcelFilterDropdown colKey={col.key} label={col.label} />
+                          <ExcelFilterDropdown colKey={col.key} />
                         )}
-
-                        {/* Invisible double-click resizer line (Excel behavior) */}
-                        <div 
-                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400/50"
-                          onDoubleClick={() => handleDoubleClickResize(col.key)}
-                        />
                       </th>
                     );
                   })}
