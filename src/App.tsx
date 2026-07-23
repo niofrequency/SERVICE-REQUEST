@@ -11,6 +11,7 @@ import SurabayaDashboard from "./components/SurabayaDashboard.js";
 import JakartaDashboard from "./components/JakartaDashboard.js";
 import AdminProfile from "./components/AdminProfile.js";
 import AuditTrailModal from "./components/AuditTrailModal.js";
+import LocationTab from "./components/LocationTab.js"; // <--- NEW IMPORT
 import { 
   ClipboardList, 
   BarChart3, 
@@ -28,7 +29,8 @@ import {
   FileText,
   Trash2,
   Menu,
-  X
+  X,
+  MapPin // <--- Added Icon for Location Tab
 } from "lucide-react";
 import { locales } from "./locales.js";
 
@@ -132,7 +134,7 @@ export default function App() {
   const t = locales[language];
 
   // Top-Level Navigation State
-  const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history" | "awaiting" | "completed">("dashboard");
+  const [currentTab, setCurrentTab] = useState<"dashboard" | "in-progress" | "history" | "awaiting" | "completed" | "location">("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DONE" | "CANCELLED">("ALL");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1283,6 +1285,19 @@ export default function App() {
               <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span>{language === "ENG" ? "History" : "Arsip"}</span>
             </button>
+            
+            {/* NEW LOCATION TAB */}
+            <button
+              onClick={() => setCurrentTab("location")}
+              className={`flex items-center justify-center space-x-2 px-3 py-2.5 sm:px-4 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                currentTab === "location"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span>{language === "ENG" ? "Location" : "Lokasi"}</span>
+            </button>
           </div>
 
           <div className="flex items-center justify-end text-[11px] font-mono text-slate-400">
@@ -1358,6 +1373,17 @@ export default function App() {
                 >
                   <History className="h-4 w-4 shrink-0 text-blue-400" />
                   <span>History</span>
+                </button>
+                
+                {/* NEW LOCATION TAB FOR MOBILE */}
+                <button
+                  onClick={() => { setCurrentTab("location"); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center space-x-3 px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition-all text-left ${
+                    currentTab === "location" ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  <MapPin className="h-4 w-4 shrink-0 text-indigo-400" />
+                  <span>Location</span>
                 </button>
               </div>
             </div>
@@ -1580,6 +1606,9 @@ export default function App() {
                   />
                 )}
               </>
+            ) : currentTab === "location" ? (
+               /* NEW LOCATION TAB VIEW */
+              <LocationTab isAdmin={currentRole === "Admin"} />
             ) : currentTab === "awaiting" ? (
               /* TAB VIEW: AWAITING REPAIR QUEUE WITH FULL SEARCH & FILTERING */
               <div className="space-y-6">
