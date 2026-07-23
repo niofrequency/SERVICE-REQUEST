@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Database, Loader2, Search } from "lucide-react";
+import { Database, Loader2, Search, Filter } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 
@@ -11,8 +11,8 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   const [fleetData, setFleetData] = useState<any[]>([]);
   const [isLoadingFleet, setIsLoadingFleet] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchCategory, setSearchCategory] = useState("ALL");
 
-  // Fetch the global fleet data from Firestore (synced automatically via Google Sheets Apps Script)
   const fetchFleetData = async () => {
     setIsLoadingFleet(true);
     try {
@@ -31,33 +31,9 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     fetchFleetData();
   }, []);
 
-  // Filter fleet inventory in real-time based on the search term across all specific categories
-  const filteredFleet = useMemo(() => {
-    if (!searchTerm.trim()) return fleetData;
-    const term = searchTerm.toLowerCase();
-    
-    return fleetData.filter(row => {
-      const checkMatch = (val: any) => String(val || "").toLowerCase().includes(term);
-      
-      return (
-        checkMatch(row["NO"]) ||
-        checkMatch(row["CONTAINER_NUMBER"]) ||
-        checkMatch(row["Mfg"]) ||
-        checkMatch(row["GAS_TYPE"]) ||
-        checkMatch(row["VOYAGE_NO"]) ||
-        checkMatch(row["DATE_TO"]) ||
-        checkMatch(row["Diff Day"]) ||
-        checkMatch(row["Product_"]) ||
-        checkMatch(row["Location_Category"]) ||
-        checkMatch(row["Location Detail"] || row["location_detail"])
-      );
-    });
-  }, [fleetData, searchTerm]);
-
   // Helper function to format long JS Date strings into DD-MMM-YYYY format
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === "-") return "-";
-    // If it is a long timestamp format from Apps Script
     if (dateStr.includes("GMT") || dateStr.length > 20) {
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) {
@@ -71,8 +47,39 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return dateStr;
   };
 
+  // Filter fleet inventory based on the selected dropdown category
+  const filteredFleet = useMemo(() => {
+    if (!searchTerm.trim()) return fleetData;
+    const term = searchTerm.toLowerCase();
+    
+    return fleetData.filter(row => {
+      // Map out all formatted data so search matches exactly what the user sees on screen
+      const rowData = {
+        "NO": String(row["NO"] || ""),
+        "CONTAINER_NUMBER": String(row["CONTAINER_NUMBER"] || ""),
+        "Mfg": formatDate(String(row["Mfg"] || "")),
+        "GAS_TYPE": String(row["GAS_TYPE"] || ""),
+        "VOYAGE_NO": String(row["VOYAGE_NO"] || ""),
+        "DATE_TO": formatDate(String(row["DATE_TO"] || "")),
+        "Diff Day": String(row["Diff Day"] || ""),
+        "Product_": String(row["Product_"] || ""),
+        "Location_Category": String(row["Location_Category"] || ""),
+        "Location Detail": String(row["Location Detail"] || row["location_detail"] || "")
+      };
+
+      if (searchCategory === "ALL") {
+        // Search across all mapped values
+        return Object.values(rowData).some(val => val.toLowerCase().includes(term));
+      } else {
+        // Search strictly in the selected category
+        const targetValue = rowData[searchCategory as keyof typeof rowData] || "";
+        return targetValue.toLowerCase().includes(term);
+      }
+    });
+  }, [fleetData, searchTerm, searchCategory]);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full pb-12">
+    <div className="space-y-6 max-w-[1600px] mx-auto w-full pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-4">
         <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
           <Database className="h-6 w-6 text-indigo-600" />
@@ -86,34 +93,59 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         </button>
       </div>
 
-      {/* SEARCH BAR & FLEET TABLE SECTION - VISIBLE TO ALL USERS */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
         
-        {/* Header and Search Container */}
-        <div className="flex flex-col gap-4">
+        {/* Top Header mimicking the History Tab */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h3 className="font-extrabold text-slate-900 text-sm font-mono uppercase tracking-widest flex items-center space-x-2">
-              <Database className="h-4 w-4 text-indigo-500" />
-              <span>Shared Company Fleet Inventory</span>
+              <Database className="h-5 w-5 text-indigo-500" />
+              <span>SHARED COMPANY FLEET INVENTORY</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Search across any category. Showing {filteredFleet.length} of {fleetData.length} total units.
+              Search global fleet locations, voyage assignments, and product statuses.
             </p>
           </div>
-
-          {/* Stretched Search Bar */}
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by Container Number, Gas Type, Voyage No, Location, Date, Product..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-            />
+          <div className="bg-slate-100 text-slate-600 font-mono text-xs px-3 py-1.5 rounded-md border border-slate-200 font-bold whitespace-nowrap">
+            {filteredFleet.length} Records Found
           </div>
         </div>
 
+        {/* Stretched Full-Width Search Bar with Integrated Dropdown */}
+        <div className="flex flex-col md:flex-row items-center w-full border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white shadow-sm">
+          <div className="pl-4 py-3 hidden md:block">
+            <Search className="h-5 w-5 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search container unit (e.g., CAIU-520082-6) or details..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 w-full px-4 py-3 text-sm bg-transparent border-none focus:ring-0 outline-none text-slate-700"
+          />
+          <div className="flex items-center border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50 px-3 py-2 md:py-0 w-full md:w-auto self-stretch">
+            <Filter className="w-4 h-4 text-slate-400 mr-2" />
+            <select
+              value={searchCategory}
+              onChange={(e) => setSearchCategory(e.target.value)}
+              className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-700 outline-none cursor-pointer py-3 pr-4 w-full md:w-auto"
+            >
+              <option value="ALL">All Categories</option>
+              <option value="NO">No</option>
+              <option value="CONTAINER_NUMBER">Container Number</option>
+              <option value="Mfg">Mfg</option>
+              <option value="GAS_TYPE">Gas Type</option>
+              <option value="VOYAGE_NO">Voyage No</option>
+              <option value="DATE_TO">Date To</option>
+              <option value="Diff Day">Diff Day</option>
+              <option value="Product_">Product</option>
+              <option value="Location_Category">Location Category</option>
+              <option value="Location Detail">Location Detail</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Data Table */}
         {isLoadingFleet ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
