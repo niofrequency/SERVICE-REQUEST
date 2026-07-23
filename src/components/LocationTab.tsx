@@ -9,7 +9,7 @@ import {
   ArrowUpZA, 
   X
 } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase.js";
 
 interface LocationTabProps {
@@ -32,22 +32,20 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingInfo = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
 
-  const fetchFleetData = async () => {
-    setIsLoadingFleet(true);
-    try {
-      const fleetDoc = await getDoc(doc(db, "app_data", "fleet_inventory"));
-      if (fleetDoc.exists()) {
-        setFleetData(fleetDoc.data().items || []);
-      }
-    } catch (error) {
-      console.error("Error fetching fleet data:", error);
-    } finally {
-      setIsLoadingFleet(false);
-    }
-  };
-
+  // Real-time listener for live synchronization with Google Apps Script triggers
   useEffect(() => {
-    fetchFleetData();
+    setIsLoadingFleet(true);
+    const unsubscribe = onSnapshot(doc(db, "app_data", "fleet_inventory"), (docSnap) => {
+      if (docSnap.exists()) {
+        setFleetData(docSnap.data().items || []);
+      }
+      setIsLoadingFleet(false);
+    }, (error) => {
+      console.error("Error listening to fleet inventory data:", error);
+      setIsLoadingFleet(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Helper function to format long JS Date strings into DD-MMM-YYYY format
