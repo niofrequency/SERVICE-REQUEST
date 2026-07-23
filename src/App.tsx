@@ -612,7 +612,6 @@ export default function App() {
     }
   };
 
-  // Handle status update with Admin Revert support
   const handleStatusUpdate = async (
     id: string,
     updatePayload: {
@@ -636,13 +635,11 @@ export default function App() {
       const userEmail = auth.currentUser?.email || loggedInUser?.email;
       const isAdmin = userEmail === "mpigome44@gmail.com";
 
-      // FIXED BUG: Properly allow Admin override on Timika status locks
       if (updatePayload.location === LocationTeam.TIMIKA) {
         if (!isAdmin && (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE)) {
           throw new Error("Unauthorized: Timika port inspectors cannot modify or advance workshop repair jobs.");
         }
       } else if (updatePayload.location === LocationTeam.SURABAYA || updatePayload.location === LocationTeam.JAKARTA) {
-        // Allow Admin to bypass completed lock for reverting statuses
         if (!isAdmin && oldStatus === RequestStatus.DONE && updatePayload.status !== RequestStatus.DONE) {
           throw new Error("Unauthorized: Completed jobs are certified and locked in the ledger.");
         }
@@ -650,12 +647,10 @@ export default function App() {
 
       const updatedRequest = { ...request };
 
-      // Extract raw repair photos, fallback to repairPhotoUrl
       let rawRepairPhotos = updatePayload.repairPhotoUrls && updatePayload.repairPhotoUrls.length > 0 
         ? updatePayload.repairPhotoUrls 
         : (updatePayload.repairPhotoUrl ? [updatePayload.repairPhotoUrl] : []);
 
-      // Enforce the maximum limit of 3 photos
       rawRepairPhotos = rawRepairPhotos.slice(0, 3);
 
       let storedRepairPhotos: string[] = [];
@@ -665,7 +660,6 @@ export default function App() {
             const compressed = img.startsWith("data:image") ? await compressImage(img) : img;
             const downloadUrl = await uploadImageToStorage(compressed, id, "repair");
             
-            // Hard Guard: Prevent Base64 from entering Firestore if Storage fails silently
             if (downloadUrl.startsWith("data:image")) {
               throw new Error("Critical Error: Image failed to upload to Firebase Storage Bucket.");
             }
@@ -712,36 +706,35 @@ export default function App() {
     }
   };
 
-  // Interactive Delete Handler (Restricted to Timika / Admin)
+  // CORRECTED: Interactive Delete Handler (Throws error up to Modal)
   const handleDeleteRequest = async (id: string) => {
     const userEmail = auth.currentUser?.email || loggedInUser?.email;
     const isAdmin = userEmail === "mpigome44@gmail.com";
     const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
     
     if (!isTimikaUser) {
-      alert("Unauthorized: Only Timika personnel and Admin can delete service requests.");
-      return;
+      throw new Error("Unauthorized: Only Timika personnel and Admin can delete service requests.");
     }
 
-    if (window.confirm(language === "ENG" ? "Are you sure you want to delete this service request?" : "Apakah Anda yakin ingin menghapus permintaan layanan ini?")) {
-      try {
-        await deleteDoc(doc(db, "requests", id));
-        setSelectedRequest(null);
-      } catch (err: any) {
-        alert(`Delete failed: ${err.message}`);
-      }
+    // Removed the secondary window.confirm to prevent browser blocking. 
+    // The Modal handles UI confirmation.
+    try {
+      await deleteDoc(doc(db, "requests", id));
+      setSelectedRequest(null);
+    } catch (err: any) {
+      console.error("Delete Error:", err);
+      throw new Error(err.message || "Permission Denied by Firestore Rules.");
     }
   };
 
-  // Interactive Update Handler with safe field sanitization
+  // CORRECTED: Interactive Update Handler (Throws error up to Modal)
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
     const userEmail = auth.currentUser?.email || loggedInUser?.email;
     const isAdmin = userEmail === "mpigome44@gmail.com";
     const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
 
     if (!isTimikaUser) {
-      alert("Unauthorized: Only Timika personnel and Admin can edit active requests.");
-      return;
+      throw new Error("Unauthorized: Only Timika personnel and Admin can edit active requests.");
     }
 
     try {
@@ -751,7 +744,6 @@ export default function App() {
 
       const timestamp = new Date().toISOString();
       
-      // Filter out undefined values to prevent Firestore 400 errors
       const sanitizedFields = Object.fromEntries(
         Object.entries(updatedFields).filter(([_, v]) => v !== undefined)
       );
@@ -782,7 +774,8 @@ export default function App() {
       await setDoc(docRef, updated);
       setSelectedRequest(updated);
     } catch (err: any) {
-      alert(`Update failed: ${err.message}`);
+      console.error("Update Error:", err);
+      throw new Error(err.message || "Permission Denied by Firestore Rules.");
     }
   };
 
@@ -1609,8 +1602,12 @@ export default function App() {
                 )}
               </>
             ) : currentTab === "location" ? (
-               /* NEW LOCATION TAB VIEW */
-              <LocationTab isAdmin={currentRole === "Admin"} />
+               /* NEW LOCATION TAB VIEW WITH CONNECTED HANDLERS */
+              <LocationTab 
+                isAdmin={currentRole === "Admin"} 
+                requests={requests}
+                onSelectRequest={setSelectedRequest}
+              />
             ) : currentTab === "awaiting" ? (
               /* TAB VIEW: AWAITING REPAIR QUEUE WITH FULL SEARCH & FILTERING */
               <div className="space-y-6">
