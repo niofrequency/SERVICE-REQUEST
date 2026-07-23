@@ -4,7 +4,7 @@ import {
   Database, 
   Loader2, 
   Search, 
-  Filter, 
+  ChevronDown, 
   ArrowDownAZ, 
   ArrowUpZA, 
   X
@@ -161,7 +161,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Component for the Excel Dropdown Menu
+  // Component for the Excel-style Dropdown Menu
   const ExcelFilterDropdown = ({ colKey }: { colKey: string }) => {
     const [localSearch, setLocalSearch] = useState("");
     
@@ -216,59 +216,59 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
     return (
       <div 
-        className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-lg z-50 text-slate-700 font-sans text-left"
+        className="absolute top-full right-0 mt-1 w-64 bg-white border border-slate-300 shadow-2xl rounded z-50 text-slate-800 font-sans text-left select-none"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex flex-col p-2 space-y-1 border-b border-slate-100">
-          <button onClick={() => handleSort('asc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
-            <ArrowDownAZ className="w-4 h-4 mr-2 text-slate-400" /> Sort A to Z
+        <div className="flex flex-col py-1 border-b border-slate-200">
+          <button onClick={() => handleSort('asc')} className="flex items-center px-3 py-1.5 hover:bg-slate-100 text-xs font-normal rounded cursor-pointer transition-colors text-slate-700">
+            <ArrowDownAZ className="w-3.5 h-3.5 mr-2 text-slate-500" /> Sort A to Z
           </button>
-          <button onClick={() => handleSort('desc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
-            <ArrowUpZA className="w-4 h-4 mr-2 text-slate-400" /> Sort Z to A
+          <button onClick={() => handleSort('desc')} className="flex items-center px-3 py-1.5 hover:bg-slate-100 text-xs font-normal rounded cursor-pointer transition-colors text-slate-700">
+            <ArrowUpZA className="w-3.5 h-3.5 mr-2 text-slate-500" /> Sort Z to A
           </button>
-          <button onClick={handleClear} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold text-rose-600 rounded cursor-pointer transition-colors">
-            <X className="w-4 h-4 mr-2" /> Clear Filter
+          <button onClick={handleClear} className="flex items-center px-3 py-1.5 hover:bg-slate-100 text-xs font-normal text-rose-600 rounded cursor-pointer transition-colors">
+            <X className="w-3.5 h-3.5 mr-2" /> Clear Filter From "{colKey}"
           </button>
         </div>
         
-        <div className="p-3 space-y-3">
+        <div className="p-2 space-y-2 bg-white">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search..." 
+              placeholder="Search" 
               value={localSearch}
               onChange={e => setLocalSearch(e.target.value)}
-              className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded focus:border-indigo-500 outline-none"
+              className="w-full pl-8 pr-2 py-1 text-xs border border-slate-300 rounded focus:border-blue-500 outline-none bg-white text-slate-800"
             />
           </div>
 
-          <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 p-2 rounded bg-slate-50">
-            <label className="flex items-center space-x-2 text-xs cursor-pointer">
+          <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-300 p-2 rounded bg-white shadow-inner">
+            <label className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-slate-50 p-0.5 rounded">
               <input 
                 type="checkbox" 
                 checked={tempSelections.length === filteredOptions.length && filteredOptions.length > 0} 
                 onChange={toggleAll}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                className="rounded-none border-slate-400 text-blue-600 focus:ring-0 cursor-pointer w-3.5 h-3.5"
               />
-              <span className="font-bold">(Select All)</span>
+              <span className="font-semibold text-slate-900">(Select All)</span>
             </label>
             {filteredOptions.map((opt, i) => (
-              <label key={i} className="flex items-center space-x-2 text-xs cursor-pointer">
+              <label key={i} className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-slate-50 p-0.5 rounded">
                 <input 
                   type="checkbox" 
                   checked={tempSelections.includes(opt)}
                   onChange={() => toggleSelection(opt)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="rounded-none border-slate-400 text-blue-600 focus:ring-0 cursor-pointer w-3.5 h-3.5"
                 />
-                <span className="truncate">{opt === "" ? "(Blanks)" : opt}</span>
+                <span className="truncate text-slate-700">{opt === "" ? "(Blanks)" : opt}</span>
               </label>
             ))}
           </div>
 
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-            <button onClick={() => setActiveFilterDropdown(null)} className="px-3 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
-            <button onClick={handleApply} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors cursor-pointer">OK</button>
+          <div className="flex justify-center space-x-2 pt-2 border-t border-slate-200">
+            <button onClick={handleApply} className="px-4 py-1 text-xs bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer shadow-sm">OK</button>
+            <button onClick={() => setActiveFilterDropdown(null)} className="px-4 py-1 text-xs border border-slate-300 bg-white text-slate-700 font-medium rounded hover:bg-slate-50 transition-colors cursor-pointer shadow-sm">Cancel</button>
           </div>
         </div>
       </div>
@@ -332,7 +332,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
           <div className="overflow-x-auto rounded-xl border border-slate-200 min-h-[400px]">
             <table className="w-full text-left border-collapse whitespace-nowrap table-fixed">
               <thead>
-                <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono select-none">
+                <tr className="bg-slate-100 text-[11px] uppercase font-semibold text-slate-700 font-sans select-none">
                   {columns.map((col) => {
                     const isFiltered = !!colFilters[col.key] && colFilters[col.key].length > 0;
                     const isSorted = sortConfig?.key === col.key;
@@ -341,21 +341,22 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
                     return (
                       <th 
                         key={col.key} 
-                        className="p-3 border-b border-slate-200 relative group overflow-hidden"
+                        className="p-2.5 border-b border-r border-slate-300 relative group overflow-visible bg-slate-100"
                         style={{ width: `${currentWidth}px` }}
                       >
                         <div className="flex items-center justify-between space-x-1">
-                          <span className="truncate">{col.label}</span>
+                          <span className="truncate font-bold">{col.label}</span>
                           
-                          {/* Excel Filter Icon */}
+                          {/* Excel Dropdown Arrow Trigger */}
                           <div 
-                            className={`p-1 rounded hover:bg-slate-200 cursor-pointer transition-colors shrink-0 ${isFiltered || isSorted ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}
+                            className={`p-1 rounded border border-transparent hover:border-slate-400 hover:bg-slate-200 cursor-pointer transition-all shrink-0 flex items-center justify-center ${isFiltered || isSorted ? 'bg-blue-100 border-blue-400 text-blue-700' : 'text-slate-600 bg-slate-200/60'}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveFilterDropdown(activeFilterDropdown === col.key ? null : col.key);
                             }}
+                            title="Filter / Sort"
                           >
-                            <Filter className="w-3 h-3" />
+                            <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
                           </div>
                         </div>
 
@@ -366,7 +367,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
                         {/* Resizing Handle */}
                         <div 
-                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 z-10"
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 z-10"
                           onMouseDown={(e) => handleMouseDown(e, col.key)}
                         />
                       </th>
@@ -380,21 +381,21 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
                   const isHighDiff = !isNaN(diffDay) && diffDay > 50;
 
                   return (
-                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3 font-mono text-slate-400 truncate" style={{ width: `${columnWidths["NO"] || columns[0].defaultWidth}px` }}>{row["NO"] || idx + 1}</td>
-                      <td className="p-3 font-bold text-slate-900 truncate" style={{ width: `${columnWidths["CONTAINER_NUMBER"] || columns[1].defaultWidth}px` }}>{row["CONTAINER_NUMBER"] || "-"}</td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["Mfg"] || columns[2].defaultWidth}px` }}>{formatDate(String(row["Mfg"] || "-"))}</td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["GAS_TYPE"] || columns[3].defaultWidth}px` }}>{row["GAS_TYPE"] || "-"}</td>
-                      <td className="p-3 text-[11px] truncate" style={{ width: `${columnWidths["VOYAGE_NO"] || columns[4].defaultWidth}px` }}>{row["VOYAGE_NO"] || "-"}</td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["DATE_TO"] || columns[5].defaultWidth}px` }}>{formatDate(String(row["DATE_TO"] || "-"))}</td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["Diff Day"] || columns[6].defaultWidth}px` }}>
-                        <span className={`px-2 py-1 rounded-md font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    <tr key={idx} className="border-b border-slate-200 hover:bg-blue-50/30 transition-colors">
+                      <td className="p-2.5 border-r border-slate-200 font-mono text-slate-500 truncate" style={{ width: `${columnWidths["NO"] || columns[0].defaultWidth}px` }}>{row["NO"] || idx + 1}</td>
+                      <td className="p-2.5 border-r border-slate-200 font-bold text-slate-900 truncate" style={{ width: `${columnWidths["CONTAINER_NUMBER"] || columns[1].defaultWidth}px` }}>{row["CONTAINER_NUMBER"] || "-"}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["Mfg"] || columns[2].defaultWidth}px` }}>{formatDate(String(row["Mfg"] || "-"))}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["GAS_TYPE"] || columns[3].defaultWidth}px` }}>{row["GAS_TYPE"] || "-"}</td>
+                      <td className="p-2.5 border-r border-slate-200 text-[11px] truncate" style={{ width: `${columnWidths["VOYAGE_NO"] || columns[4].defaultWidth}px` }}>{row["VOYAGE_NO"] || "-"}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["DATE_TO"] || columns[5].defaultWidth}px` }}>{formatDate(String(row["DATE_TO"] || "-"))}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["Diff Day"] || columns[6].defaultWidth}px` }}>
+                        <span className={`px-2 py-0.5 rounded font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                           {row["Diff Day"] ?? "0"}
                         </span>
                       </td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["Product_"] || columns[7].defaultWidth}px` }}>{row["Product_"] || "-"}</td>
-                      <td className="p-3 truncate" style={{ width: `${columnWidths["Location_Category"] || columns[8].defaultWidth}px` }}>{row["Location_Category"] || "-"}</td>
-                      <td className="p-3 font-mono text-[10px] text-blue-700 bg-blue-50/50 truncate" style={{ width: `${columnWidths["Location Detail"] || columns[9].defaultWidth}px` }}>{row["Location Detail"] || row["location_detail"] || "-"}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["Product_"] || columns[7].defaultWidth}px` }}>{row["Product_"] || "-"}</td>
+                      <td className="p-2.5 border-r border-slate-200 truncate" style={{ width: `${columnWidths["Location_Category"] || columns[8].defaultWidth}px` }}>{row["Location_Category"] || "-"}</td>
+                      <td className="p-2.5 font-mono text-[10px] text-blue-700 bg-blue-50/50 truncate" style={{ width: `${columnWidths["Location Detail"] || columns[9].defaultWidth}px` }}>{row["Location Detail"] || row["location_detail"] || "-"}</td>
                     </tr>
                   );
                 })}
@@ -403,7 +404,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4 border-2 border-dashed border-slate-200 rounded-2xl">
-            <Filter className="h-8 w-8 text-slate-300" />
+            <Database className="h-8 w-8 text-slate-300" />
             <p className="text-xs font-mono uppercase tracking-widest">No Fleet Data Found Matching Your Filters</p>
           </div>
         )}
