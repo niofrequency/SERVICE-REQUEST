@@ -115,12 +115,12 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return result;
   }, [filteredFleet, sortConfig]);
 
-  // Column definitions with Gas Type made significantly smaller
+  // Column definitions matching exact dataset property keys
   const columns = [
     { key: "NO", label: "No", defaultWidth: 60 },
     { key: "CONTAINER_NUMBER", label: "Container Number", defaultWidth: 160 },
     { key: "Mfg", label: "Mfg", defaultWidth: 110 },
-    { key: "GAS_TYPE", label: "Gas Type", defaultWidth: 75 }, // Decreased width to keep it compact
+    { key: "GAS_TYPE", label: "Gas Type", defaultWidth: 75 },
     { key: "VOYAGE_NO", label: "Voyage No", defaultWidth: 200 },
     { key: "DATE_TO", label: "Date To", defaultWidth: 110 },
     { key: "Diff Day", label: "Diff Day", defaultWidth: 90 },
@@ -171,8 +171,8 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     }, [fleetData, colKey]);
 
     const activeSelections = colFilters[colKey];
-    const isInitialState = !activeSelections;
-    const [tempSelections, setTempSelections] = useState<string[]>(isInitialState ? allUniqueValues : activeSelections);
+    const initialSelections = (activeSelections && activeSelections.length > 0) ? activeSelections : allUniqueValues;
+    const [tempSelections, setTempSelections] = useState<string[]>(initialSelections);
 
     const filteredOptions = allUniqueValues.filter(val => val.toLowerCase().includes(localSearch.toLowerCase()));
 
