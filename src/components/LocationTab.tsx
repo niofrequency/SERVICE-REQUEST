@@ -114,55 +114,57 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         </h2>
       </div>
 
-      {/* Admin Only: Bulk VLookup Excel Upload Widget */}
+      {/* ADMIN-ONLY UPLOAD CONTROLS */}
       {isAdmin && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <FileSpreadsheet className="h-6 w-6" />
+        <>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                <FileSpreadsheet className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  Bulk VLookup Location Sync (Admin Control)
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload movement spreadsheets to sync warehouse/hub locations globally. <br/>
+                  <span className="font-bold text-amber-600">Note: Only containers in 'AWAITING' status will have their active repair logs updated.</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Bulk VLookup Location Sync
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Upload movement spreadsheets (e.g., 20 JULY 2026 Reefer Movement PSU and PRIMO.xlsx). <br/>
-                <span className="font-bold text-amber-600">Note: Only containers in 'AWAITING' status will have their locations updated.</span>
-              </p>
+
+            <div className="flex items-center gap-3 shrink-0">
+              {fleetData.length > 0 && (
+                <button
+                  onClick={() => setShowFleet(!showFleet)}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-indigo-200 cursor-pointer"
+                >
+                  <Database className="h-4 w-4" />
+                  <span>{showFleet ? "HIDE FLEET DATA" : "VIEW FLEET DATA"}</span>
+                </button>
+              )}
+              <label className={`flex items-center space-x-2 px-5 py-2.5 bg-[#00966A] hover:bg-[#007A55] text-white rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm ${isUploadingExcel ? "opacity-50 pointer-events-none" : ""}`}>
+                {isUploadingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <span>{isUploadingExcel ? "PROCESSING..." : "UPLOAD EXCEL"}</span>
+                <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelVLookupUpload} className="hidden" disabled={isUploadingExcel} />
+              </label>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            {fleetData.length > 0 && (
-              <button
-                onClick={() => setShowFleet(!showFleet)}
-                className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-indigo-200"
-              >
-                <Database className="h-4 w-4" />
-                <span>{showFleet ? "HIDE FLEET DATA" : "VIEW FLEET DATA"}</span>
-              </button>
-            )}
-            <label className={`flex items-center space-x-2 px-5 py-2.5 bg-[#00966A] hover:bg-[#007A55] text-white rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm ${isUploadingExcel ? "opacity-50 pointer-events-none" : ""}`}>
-              {isUploadingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              <span>{isUploadingExcel ? "PROCESSING..." : "UPLOAD EXCEL"}</span>
-              <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelVLookupUpload} className="hidden" disabled={isUploadingExcel} />
-            </label>
-          </div>
-        </div>
-      )}
+          {uploadMessage && (
+            <div className="p-4 bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] rounded-xl text-sm font-medium flex items-center space-x-2">
+              <CheckCircle2 className="h-5 w-5 text-[#059669] shrink-0" />
+              <span>{uploadMessage}</span>
+            </div>
+          )}
 
-      {uploadMessage && isAdmin && (
-        <div className="p-4 bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] rounded-xl text-sm font-medium flex items-center space-x-2">
-          <CheckCircle2 className="h-5 w-5 text-[#059669] shrink-0" />
-          <span>{uploadMessage}</span>
-        </div>
-      )}
-
-      {uploadError && isAdmin && (
-        <div className="p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm font-medium flex items-center space-x-2">
-          <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
-          <span>{uploadError}</span>
-        </div>
+          {uploadError && (
+            <div className="p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm font-medium flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+        </>
       )}
 
       {/* Fleet Inventory Table Section - Visible to EVERYONE */}
