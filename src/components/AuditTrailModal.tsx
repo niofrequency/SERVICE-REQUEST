@@ -24,6 +24,7 @@ interface AuditTrailModalProps {
   loggedInUser?: { name: string; location: LocationTeam; email?: string } | null;
   onDeleteRequest?: (id: string) => Promise<void>;
   onUpdateRequest?: (id: string, updatedFields: Partial<ServiceRequest>) => Promise<void>;
+  isAdmin?: boolean;
 }
 
 export default function AuditTrailModal({
@@ -34,13 +35,13 @@ export default function AuditTrailModal({
   loggedInUser,
   onDeleteRequest,
   onUpdateRequest,
+  isAdmin = false,
 }: AuditTrailModalProps) {
   if (!request) return null;
 
   const t = locales[language];
 
-  // Authorization Check - explicitly including the Admin email
-  const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
+  // Authorization Check - leveraging the passed prop and local location
   const isTimikaOrAdmin = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
 
   // Admin States
