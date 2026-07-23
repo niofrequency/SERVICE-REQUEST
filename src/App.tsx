@@ -11,7 +11,7 @@ import SurabayaDashboard from "./components/SurabayaDashboard.js";
 import JakartaDashboard from "./components/JakartaDashboard.js";
 import AdminProfile from "./components/AdminProfile.js";
 import AuditTrailModal from "./components/AuditTrailModal.js";
-import LocationTab from "./components/LocationTab.js"; // <--- NEW IMPORT
+import LocationTab from "./components/LocationTab.js";
 import { 
   ClipboardList, 
   BarChart3, 
@@ -30,7 +30,7 @@ import {
   Trash2,
   Menu,
   X,
-  MapPin // <--- Added Icon for Location Tab
+  MapPin
 } from "lucide-react";
 import { locales } from "./locales.js";
 
