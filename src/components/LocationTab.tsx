@@ -1,25 +1,19 @@
 // src/components/LocationTab.tsx
 import React, { useState, useEffect, useMemo } from "react";
-import { FileSpreadsheet, Upload, CheckCircle2, AlertTriangle, Database, Loader2, Search } from "lucide-react";
-import * as XLSX from "xlsx";
-import { doc, updateDoc, collection, getDocs, setDoc, getDoc } from "firebase/firestore";
+import { Database, Loader2, Search } from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
-import { RequestStatus } from "../types.js";
 
 interface LocationTabProps {
   isAdmin: boolean;
 }
 
 export default function LocationTab({ isAdmin }: LocationTabProps) {
-  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  
   const [fleetData, setFleetData] = useState<any[]>([]);
   const [isLoadingFleet, setIsLoadingFleet] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch the global fleet data from Firestore so all users see the exact same file
+  // Fetch the global fleet data from Firestore (synced automatically via Google Sheets Apps Script)
   const fetchFleetData = async () => {
     setIsLoadingFleet(true);
     try {
@@ -38,97 +32,14 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     fetchFleetData();
   }, []);
 
-  const handleExcelVLookupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingExcel(true);
-    setUploadMessage(null);
-    setUploadError(null);
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        
-        // Convert sheet to array of rows to dynamically find the header row containing "CONTAINER_NUMBER"
-        const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
-        let headerRowIndex = 0;
-        for (let i = 0; i < rows.length; i++) {
-          const rowValues = rows[i].map(val => String(val || "").trim());
-          if (rowValues.includes("CONTAINER_NUMBER")) {
-            headerRowIndex = i;
-            break;
-          }
-        }
-
-        // Re-parse sheet starting precisely from the detected header row
-        const data: any[] = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex });
-
-        if (!data || data.length === 0) {
-          throw new Error("Spreadsheet contains no valid container rows after the header.");
-        }
-
-        let updatedCount = 0;
-
-        // Fetch all current Firestore requests to update WAITING containers only
-        const querySnapshot = await getDocs(collection(db, "requests"));
-        const existingDocs = querySnapshot.docs;
-
-        for (const row of data) {
-          const containerNo = String(row["CONTAINER_NUMBER"] || "").toUpperCase().trim();
-          const newLocationDetail = row["Location Detail"] || row["location_detail"];
-
-          if (!containerNo) continue;
-
-          // MATCH CONDITION: Find document by container number AND ensure it is in WAITING status
-          const matchedDoc = existingDocs.find(d => {
-            const docData = d.data();
-            return (
-              docData.containerNumber?.toUpperCase().trim() === containerNo &&
-              docData.status === RequestStatus.WAITING
-            );
-          });
-
-          if (matchedDoc) {
-            const docRef = doc(db, "requests", matchedDoc.id);
-            await updateDoc(docRef, {
-              locationDetail: newLocationDetail, 
-              updatedAt: new Date().toISOString()
-            });
-            updatedCount++;
-          }
-        }
-
-        // Save the parsed JSON to Firestore under app_data/fleet_inventory so ALL users share this exact view
-        await setDoc(doc(db, "app_data", "fleet_inventory"), {
-          items: data,
-          lastUpdated: new Date().toISOString()
-        });
-        
-        setFleetData(data);
-        setUploadMessage(`Successfully synced! Updated locations for ${updatedCount} container(s) awaiting repair and published global fleet list.`);
-      } catch (err: any) {
-        setUploadError(`VLookup sync failed: ${err.message}`);
-      } finally {
-        setIsUploadingExcel(false);
-        e.target.value = ""; // Reset file input
-      }
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  // Filter fleet inventory in real-time based on the search term (Container Number, Mfg, or Location)
+  // Filter fleet inventory in real-time based on the search term (Container Number, Mfg, Location, or Category)
   const filteredFleet = useMemo(() => {
     if (!searchTerm.trim()) return fleetData;
     const term = searchTerm.toLowerCase();
     return fleetData.filter(row => {
       const containerNo = String(row["CONTAINER_NUMBER"] || "").toLowerCase();
       const mfg = String(row["Mfg"] || "").toLowerCase();
-      const location = String(row["Location Detail"] || "").toLowerCase();
+      const location = String(row["Location Detail"] || row["location_detail"] || "").toLowerCase();
       const category = String(row["Location_Category"] || "").toLowerCase();
       return containerNo.includes(term) || mfg.includes(term) || location.includes(term) || category.includes(term);
     });
@@ -143,53 +54,11 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         </h2>
         <button
           onClick={fetchFleetData}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all self-start md:self-auto"
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all self-start md:self-auto cursor-pointer"
         >
           Refresh Data
         </button>
       </div>
-
-      {/* STRICT ADMIN-ONLY UPLOAD CONTROLS (Hidden completely from non-admin users) */}
-      {isAdmin && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <FileSpreadsheet className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Bulk VLookup Location Sync (Admin Control)
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Upload movement spreadsheets to publish the master inventory globally to all users. <br/>
-                <span className="font-bold text-amber-600">Note: Only containers in 'AWAITING' status will have active repair logs updated.</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <label className={`flex items-center space-x-2 px-5 py-2.5 bg-[#00966A] hover:bg-[#007A55] text-white rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm ${isUploadingExcel ? "opacity-50 pointer-events-none" : ""}`}>
-              {isUploadingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              <span>{isUploadingExcel ? "PROCESSING..." : "UPLOAD EXCEL"}</span>
-              <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelVLookupUpload} className="hidden" disabled={isUploadingExcel} />
-            </label>
-          </div>
-        </div>
-      )}
-
-      {uploadMessage && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-medium flex items-center space-x-2">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-          <span>{uploadMessage}</span>
-        </div>
-      )}
-
-      {uploadError && (
-        <div className="p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm font-medium flex items-center space-x-2">
-          <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
-          <span>{uploadError}</span>
-        </div>
-      )}
 
       {/* SEARCH BAR & FLEET TABLE SECTION - VISIBLE TO ALL USERS */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
