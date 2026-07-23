@@ -2,8 +2,8 @@
 import React from "react";
 import { ServiceRequest, LocationTeam, RequestStatus } from "../types.js";
 import TimikaForm from "./TimikaForm.js";
-import SurabayaDashboard from "./components/SurabayaDashboard.js";
-import JakartaDashboard from "./components/JakartaDashboard.js";
+import SurabayaDashboard from "./SurabayaDashboard.js";
+import JakartaDashboard from "./JakartaDashboard.js";
 import { ArrowRight } from "lucide-react";
 
 interface AdminProfileProps {
