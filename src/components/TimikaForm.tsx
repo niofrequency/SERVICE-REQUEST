@@ -111,18 +111,18 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return result;
   }, [filteredFleet, sortConfig]);
 
-  // Column definitions with compact sizing rules, shrinking Gas Type down
+  // Column definitions with tighter, optimized widths to reduce excessive gaps
   const columns = [
-    { key: "NO", label: "No", width: "60px" },
-    { key: "CONTAINER_NUMBER", label: "Container Number", width: "160px" },
-    { key: "Mfg", label: "Mfg", width: "110px" },
-    { key: "GAS_TYPE", label: "Gas Type", width: "85px" },
-    { key: "VOYAGE_NO", label: "Voyage No", width: "200px" },
-    { key: "DATE_TO", label: "Date To", width: "110px" },
-    { key: "Diff Day", label: "Diff Day", width: "90px" },
-    { key: "Product_", label: "Product", width: "100px" },
-    { key: "Location_Category", label: "Location Category", width: "140px" },
-    { key: "Location Detail", label: "Location Detail", width: "140px" }
+    { key: "NO", label: "No", width: "50px" },
+    { key: "CONTAINER_NUMBER", label: "Container Number", width: "150px" },
+    { key: "Mfg", label: "Mfg", width: "100px" },
+    { key: "GAS_TYPE", label: "Gas Type", width: "80px" },
+    { key: "VOYAGE_NO", label: "Voyage No", width: "180px" },
+    { key: "DATE_TO", label: "Date To", width: "100px" },
+    { key: "Diff Day", label: "Diff Day", width: "80px" },
+    { key: "Product_", label: "Product", width: "90px" },
+    { key: "Location_Category", label: "Location Category", width: "130px" },
+    { key: "Location Detail", label: "Location Detail", width: "130px" }
   ];
 
   // Component for the Excel Dropdown Menu
