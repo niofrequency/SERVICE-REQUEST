@@ -191,7 +191,7 @@ export default function TimikaForm({
   return (
     <div className="space-y-6 w-full flex flex-col">
 
-      {/* Interactive Flow-Chart Pipeline Layout for Timika (Horizontal Row - Appears above on desktop, below on mobile via flex-col-reverse or normal ordering) */}
+      {/* Interactive Flow-Chart Pipeline Layout for Timika */}
       <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3 order-2 md:order-1">
         <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
@@ -260,7 +260,7 @@ export default function TimikaForm({
         </div>
       </div>
 
-      {/* Stretched Full-Width Service Request Form Column (Appears above pipeline on desktop, order-1 on mobile/desktop via responsive class) */}
+      {/* Stretched Full-Width Service Request Form Column */}
       <div className="w-full bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full order-1 md:order-2">
         {!isAuthorized && (
           <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
