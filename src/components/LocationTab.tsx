@@ -1,4 +1,3 @@
-// src/components/LocationTab.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Database, Loader2, Search } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
@@ -32,18 +31,45 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     fetchFleetData();
   }, []);
 
-  // Filter fleet inventory in real-time based on the search term (Container Number, Mfg, Location, or Category)
+  // Filter fleet inventory in real-time based on the search term across all specific categories
   const filteredFleet = useMemo(() => {
     if (!searchTerm.trim()) return fleetData;
     const term = searchTerm.toLowerCase();
+    
     return fleetData.filter(row => {
-      const containerNo = String(row["CONTAINER_NUMBER"] || "").toLowerCase();
-      const mfg = String(row["Mfg"] || "").toLowerCase();
-      const location = String(row["Location Detail"] || row["location_detail"] || "").toLowerCase();
-      const category = String(row["Location_Category"] || "").toLowerCase();
-      return containerNo.includes(term) || mfg.includes(term) || location.includes(term) || category.includes(term);
+      const checkMatch = (val: any) => String(val || "").toLowerCase().includes(term);
+      
+      return (
+        checkMatch(row["NO"]) ||
+        checkMatch(row["CONTAINER_NUMBER"]) ||
+        checkMatch(row["Mfg"]) ||
+        checkMatch(row["GAS_TYPE"]) ||
+        checkMatch(row["VOYAGE_NO"]) ||
+        checkMatch(row["DATE_TO"]) ||
+        checkMatch(row["Diff Day"]) ||
+        checkMatch(row["Product_"]) ||
+        checkMatch(row["Location_Category"]) ||
+        checkMatch(row["Location Detail"] || row["location_detail"])
+      );
     });
   }, [fleetData, searchTerm]);
+
+  // Helper function to format long JS Date strings into DD-MMM-YYYY format
+  const formatDate = (dateStr: string) => {
+    if (!dateStr || dateStr === "-") return "-";
+    // If it is a long timestamp format from Apps Script
+    if (dateStr.includes("GMT") || dateStr.length > 20) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+      }
+    }
+    return dateStr;
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full pb-12">
@@ -61,27 +87,29 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
       </div>
 
       {/* SEARCH BAR & FLEET TABLE SECTION - VISIBLE TO ALL USERS */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
+        
+        {/* Header and Search Container */}
+        <div className="flex flex-col gap-4">
           <div>
-            <h3 className="font-extrabold text-slate-900 text-xs font-mono uppercase tracking-widest flex items-center space-x-2">
+            <h3 className="font-extrabold text-slate-900 text-sm font-mono uppercase tracking-widest flex items-center space-x-2">
               <Database className="h-4 w-4 text-indigo-500" />
               <span>Shared Company Fleet Inventory</span>
             </h3>
-            <p className="text-[10px] text-slate-500 mt-1 uppercase">
-              Showing {filteredFleet.length} of {fleetData.length} total units
+            <p className="text-xs text-slate-500 mt-1">
+              Search across any category. Showing {filteredFleet.length} of {fleetData.length} total units.
             </p>
           </div>
 
-          {/* Search Bar for all users */}
-          <div className="relative w-full md:w-80">
+          {/* Stretched Search Bar */}
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search container number, location..."
+              placeholder="Search by Container Number, Gas Type, Voyage No, Location, Date, Product..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
             />
           </div>
         </div>
@@ -117,10 +145,10 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
                     <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                       <td className="p-3 font-mono text-slate-400">{row["NO"] || idx + 1}</td>
                       <td className="p-3 font-bold text-slate-900">{row["CONTAINER_NUMBER"] || "-"}</td>
-                      <td className="p-3">{String(row["Mfg"] || "-")}</td>
+                      <td className="p-3">{formatDate(String(row["Mfg"] || "-"))}</td>
                       <td className="p-3">{row["GAS_TYPE"] || "-"}</td>
                       <td className="p-3 text-[11px] truncate max-w-[150px]">{row["VOYAGE_NO"] || "-"}</td>
-                      <td className="p-3">{String(row["DATE_TO"] || "-")}</td>
+                      <td className="p-3">{formatDate(String(row["DATE_TO"] || "-"))}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded-md font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                           {row["Diff Day"] ?? "0"}
