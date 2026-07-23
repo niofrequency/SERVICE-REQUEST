@@ -1,487 +1,370 @@
-// src/components/TimikaForm.tsx
-import React, { useState, useRef, useEffect } from "react";
-import { doc, deleteDoc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
+// src/components/LocationTab.tsx
+import React, { useState, useEffect, useMemo } from "react";
 import { 
-  PriorityLevel, 
-  IssueCategory, 
-  ServiceRequest, 
-  RequestStatus, 
-  LocationTeam 
-} from "../types.js";
-import { 
-  Camera, 
-  AlertTriangle, 
-  CheckCircle, 
-  Image as ImageIcon,
-  Send,
-  ArrowRight
+  Database, 
+  Loader2, 
+  Search, 
+  Filter, 
+  ArrowDownAZ, 
+  ArrowUpZA, 
+  X
 } from "lucide-react";
-import { locales } from "../locales.js";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase.js";
 
-interface TimikaFormProps {
-  onSubmitSuccess: () => void;
-  onSubmitRequest?: (payload: {
-    containerNumber: string;
-    priority: PriorityLevel;
-    category: IssueCategory;
-    description: string;
-    photoUrl: string | null;
-    reporterName: string;
-    destinationLocation?: LocationTeam; 
-  }) => Promise<void>;
-  requests: ServiceRequest[];
-  onSelectRequest: (request: ServiceRequest) => void;
-  language: "ENG" | "IND";
-  loggedInUser: { name: string; location: LocationTeam; email?: string } | null;
-  prefilledContainerNumber?: string;
-  prefilledPhoto?: string | null;
-  onClearPrefilled?: () => void;
-  onNavigateHistory?: () => void;
-  onNavigateInProgress?: () => void;
-  onNavigateTab?: (tab: "awaiting" | "in-progress" | "completed") => void;
+interface LocationTabProps {
+  isAdmin: boolean;
 }
 
-// Helper to automatically format container number to ISO 6346 with hyphens (e.g. CBHU-265392-1)
-const formatContainerNumber = (val: string): string => {
-  const clean = val.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-  if (clean.length === 0) return "";
+export default function LocationTab({ isAdmin }: LocationTabProps) {
+  const [fleetData, setFleetData] = useState<any[]>([]);
+  const [isLoadingFleet, setIsLoadingFleet] = useState(true);
   
-  let formatted = "";
-  const part1 = clean.slice(0, 4);
-  formatted += part1;
+  // Global search
+  const [searchTerm, setSearchTerm] = useState("");
   
-  if (clean.length > 4) {
-    const part2 = clean.slice(4, 10);
-    formatted += `-${part2}`;
-  }
-  
-  if (clean.length > 10) {
-    const part3 = clean.slice(10, 11);
-    formatted += `-${part3}`;
-  }
-  
-  return formatted;
-};
+  // Excel Filter States
+  const [colFilters, setColFilters] = useState<Record<string, string[]>>({});
+  const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc' | 'desc' } | null>(null);
+  const [activeFilterDropdown, setActiveFilterDropdown] = useState<string | null>(null);
 
-export default function TimikaForm({
-  onSubmitSuccess,
-  onSubmitRequest,
-  requests,
-  onSelectRequest,
-  language,
-  loggedInUser,
-  prefilledContainerNumber,
-  prefilledPhoto,
-  onClearPrefilled,
-  onNavigateHistory,
-  onNavigateInProgress,
-  onNavigateTab,
-}: TimikaFormProps) {
-  const t = locales[language];
-
-  // Form State
-  const [containerNumber, setContainerNumber] = useState("");
-  const [priority, setPriority] = useState<PriorityLevel>(PriorityLevel.MEDIUM);
-  const [category, setCategory] = useState<IssueCategory>(IssueCategory.STRUCTURAL);
-  const [description, setDescription] = useState("");
-  const [reporterName, setReporterName] = useState(() => loggedInUser?.name || "");
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [destinationLocation, setDestinationLocation] = useState<LocationTeam>(LocationTeam.SURABAYA); // Default destination
-
-  // Prefill from external inputs or mobile camera
-  useEffect(() => {
-    if (prefilledContainerNumber) {
-      setContainerNumber(formatContainerNumber(prefilledContainerNumber));
+  const fetchFleetData = async () => {
+    setIsLoadingFleet(true);
+    try {
+      const fleetDoc = await getDoc(doc(db, "app_data", "fleet_inventory"));
+      if (fleetDoc.exists()) {
+        setFleetData(fleetDoc.data().items || []);
+      }
+    } catch (error) {
+      console.error("Error fetching fleet data:", error);
+    } finally {
+      setIsLoadingFleet(false);
     }
-  }, [prefilledContainerNumber]);
-
-  useEffect(() => {
-    if (prefilledPhoto) {
-      setPhoto(prefilledPhoto);
-    }
-  }, [prefilledPhoto]);
-
-  // Auth constraint check: Only Timika users or Admin can modify/edit in Timika view
-  const isAdmin = loggedInUser?.email === "mpigome44@gmail.com";
-  const isAuthorized = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
-
-  // Auto assign logged-in user name
-  useEffect(() => {
-    if (loggedInUser && loggedInUser.location === LocationTeam.TIMIKA) {
-      setReporterName(loggedInUser.name);
-    }
-  }, [loggedInUser]);
-
-  // UI Flow State
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Flowchart Pipeline counts for Timika
-  const waitingCount = requests.filter((req) => req.status === RequestStatus.WAITING).length;
-  const inProgressCount = requests.filter((req) => req.status === RequestStatus.IN_PROGRESS).length;
-  const completedCount = requests.filter((req) => req.status === RequestStatus.DONE).length;
-
-  // Direct manual file upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setPhoto(base64);
-    };
-    reader.readAsDataURL(file);
   };
 
-  // Submit the Service Request
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
+  useEffect(() => {
+    fetchFleetData();
+  }, []);
 
-    if (!isAuthorized) {
-      setSubmitError("Unauthorized: Only Timika Hub users can submit new service requests.");
-      return;
-    }
-
-    if (!containerNumber.trim()) {
-      setSubmitError("Container Number is required. Please type the container plate above.");
-      return;
-    }
-
-    const cleanNum = containerNumber.replace(/[^a-zA-Z0-9]/g, "");
-    if (cleanNum.length < 8) {
-      setSubmitError("Warning: Container number seems too short. Ensure valid ISO 6346 code (e.g. MSKU 491028 3)");
-    }
-
-    if (!description.trim()) {
-      setSubmitError("Please provide a detailed description of the damage.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      if (onSubmitRequest) {
-        await onSubmitRequest({
-          containerNumber,
-          priority,
-          category,
-          description,
-          photoUrl: photo,
-          reporterName,
-          destinationLocation, 
-        });
-        setContainerNumber("");
-        setDescription("");
-        setPhoto(null);
-        if (onClearPrefilled) onClearPrefilled();
-        onSubmitSuccess();
+  // Helper function to format long JS Date strings into DD-MMM-YYYY format
+  const formatDate = (dateStr: string) => {
+    if (!dateStr || dateStr === "-") return "-";
+    if (dateStr.includes("GMT") || dateStr.length > 20) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
       }
-    } catch (err: any) {
-      setSubmitError(err.message || "Network error: Could not connect to full-stack server.");
-    } finally {
-      setIsSubmitting(false);
     }
+    return dateStr;
+  };
+
+  const getFormattedValue = (row: any, colKey: string) => {
+    if (colKey === "Location Detail") return String(row["Location Detail"] || row["location_detail"] || "");
+    if (colKey === "Mfg" || colKey === "DATE_TO") return formatDate(String(row[colKey] || ""));
+    if (colKey === "NO") return String(row["NO"] || "");
+    return String(row[colKey] || "");
+  };
+
+  // 1. Process Global Search & Column Checkbox Filters safely
+  const filteredFleet = useMemo(() => {
+    return fleetData.filter(row => {
+      // Global Search
+      let matchesGlobal = true;
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        const rowValues = Object.values(row).map(v => String(v || "").toLowerCase());
+        matchesGlobal = rowValues.some(val => val.includes(term));
+      }
+
+      // Column Checkbox Filters
+      let matchesColumns = true;
+      for (const [colKey, selectedValues] of Object.entries(colFilters)) {
+        if (selectedValues && selectedValues.length > 0) {
+          const cellVal = getFormattedValue(row, colKey);
+          if (!selectedValues.includes(cellVal)) {
+            matchesColumns = false;
+            break; 
+          }
+        }
+      }
+
+      return matchesGlobal && matchesColumns;
+    });
+  }, [fleetData, searchTerm, colFilters]);
+
+  // 2. Process Sorting
+  const sortedFleet = useMemo(() => {
+    let result = [...filteredFleet];
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const valA = getFormattedValue(a, sortConfig.key).toLowerCase();
+        const valB = getFormattedValue(b, sortConfig.key).toLowerCase();
+        if (valA < valB) return sortConfig.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [filteredFleet, sortConfig]);
+
+  // Column definitions with compact sizing rules, shrinking Gas Type down
+  const columns = [
+    { key: "NO", label: "No", width: "60px" },
+    { key: "CONTAINER_NUMBER", label: "Container Number", width: "160px" },
+    { key: "Mfg", label: "Mfg", width: "110px" },
+    { key: "GAS_TYPE", label: "Gas Type", width: "85px" },
+    { key: "VOYAGE_NO", label: "Voyage No", width: "200px" },
+    { key: "DATE_TO", label: "Date To", width: "110px" },
+    { key: "Diff Day", label: "Diff Day", width: "90px" },
+    { key: "Product_", label: "Product", width: "100px" },
+    { key: "Location_Category", label: "Location Category", width: "140px" },
+    { key: "Location Detail", label: "Location Detail", width: "140px" }
+  ];
+
+  // Component for the Excel Dropdown Menu
+  const ExcelFilterDropdown = ({ colKey }: { colKey: string }) => {
+    const [localSearch, setLocalSearch] = useState("");
+    
+    const allUniqueValues = useMemo(() => {
+      const values = new Set(fleetData.map(row => getFormattedValue(row, colKey)));
+      return Array.from(values).sort();
+    }, [fleetData, colKey]);
+
+    const activeSelections = colFilters[colKey];
+    const isInitialState = !activeSelections;
+    const [tempSelections, setTempSelections] = useState<string[]>(isInitialState ? allUniqueValues : activeSelections);
+
+    const filteredOptions = allUniqueValues.filter(val => val.toLowerCase().includes(localSearch.toLowerCase()));
+
+    const handleSort = (dir: 'asc' | 'desc') => {
+      setSortConfig({ key: colKey, dir });
+      setActiveFilterDropdown(null);
+    };
+
+    const handleApply = () => {
+      if (tempSelections.length === allUniqueValues.length) {
+        const newFilters = { ...colFilters };
+        delete newFilters[colKey];
+        setColFilters(newFilters);
+      } else {
+        setColFilters({ ...colFilters, [colKey]: tempSelections });
+      }
+      setActiveFilterDropdown(null);
+    };
+
+    const handleClear = () => {
+      const newFilters = { ...colFilters };
+      delete newFilters[colKey];
+      setColFilters(newFilters);
+      setSortConfig(null);
+      setActiveFilterDropdown(null);
+    };
+
+    const toggleSelection = (val: string) => {
+      setTempSelections(prev => 
+        prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+      );
+    };
+
+    const toggleAll = () => {
+      if (tempSelections.length === filteredOptions.length) {
+        setTempSelections([]);
+      } else {
+        setTempSelections([...filteredOptions]);
+      }
+    };
+
+    return (
+      <div 
+        className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-lg z-50 text-slate-700 font-sans text-left"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex flex-col p-2 space-y-1 border-b border-slate-100">
+          <button onClick={() => handleSort('asc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
+            <ArrowDownAZ className="w-4 h-4 mr-2 text-slate-400" /> Sort A to Z
+          </button>
+          <button onClick={() => handleSort('desc')} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold rounded cursor-pointer transition-colors">
+            <ArrowUpZA className="w-4 h-4 mr-2 text-slate-400" /> Sort Z to A
+          </button>
+          <button onClick={handleClear} className="flex items-center px-3 py-2 hover:bg-slate-50 text-xs font-semibold text-rose-600 rounded cursor-pointer transition-colors">
+            <X className="w-4 h-4 mr-2" /> Clear Filter
+          </button>
+        </div>
+        
+        <div className="p-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
+              className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded focus:border-indigo-500 outline-none"
+            />
+          </div>
+
+          <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 p-2 rounded bg-slate-50">
+            <label className="flex items-center space-x-2 text-xs cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={tempSelections.length === filteredOptions.length && filteredOptions.length > 0} 
+                onChange={toggleAll}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <span className="font-bold">(Select All)</span>
+            </label>
+            {filteredOptions.map((opt, i) => (
+              <label key={i} className="flex items-center space-x-2 text-xs cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={tempSelections.includes(opt)}
+                  onChange={() => toggleSelection(opt)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="truncate">{opt === "" ? "(Blanks)" : opt}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button onClick={() => setActiveFilterDropdown(null)} className="px-3 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
+            <button onClick={handleApply} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors cursor-pointer">OK</button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="space-y-6 w-full flex flex-col">
-
-      {/* Interactive Flow-Chart Pipeline Layout for Timika (Horizontal Row - Appears above on desktop, below on mobile via flex-col-reverse or normal ordering) */}
-      <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3 order-2 md:order-1">
-        <h3 className="text-xs font-bold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          {language === "ENG" ? "Timika Service Flowchart Pipeline" : "Alur Pipa Layanan Timika"}
-        </h3>
-        
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
-          {/* Box 1: Awaiting Repair */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("awaiting") : onNavigateInProgress?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-amber-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-amber-600 uppercase">Step 1</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Awaiting Repair</h4>
-              <p className="text-[10px] text-slate-500">Click to view queue</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {waitingCount}
-            </div>
-          </div>
-
-          {/* Arrow 1 */}
-          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-              <ArrowRight className="h-4 w-4 animate-pulse text-blue-600" />
-            </div>
-          </div>
-
-          {/* Box 2: In Progress */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("in-progress") : onNavigateInProgress?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-blue-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-blue-600 uppercase">Step 2</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">In Progress</h4>
-              <p className="text-[10px] text-slate-500">Click to view active jobs</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {inProgressCount}
-            </div>
-          </div>
-
-          {/* Arrow 2 */}
-          <div className="hidden md:flex justify-center text-slate-400 shrink-0 px-1">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
-              <ArrowRight className="h-4 w-4 animate-pulse text-emerald-600" />
-            </div>
-          </div>
-
-          {/* Box 3: Completed */}
-          <div
-            onClick={() => onNavigateTab ? onNavigateTab("completed") : onNavigateHistory?.()}
-            className="flex-1 w-full bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-mono font-bold text-emerald-600 uppercase">Step 3</span>
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase">Completed</h4>
-              <p className="text-[10px] text-slate-500">Click to view archives</p>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono font-bold text-sm group-hover:scale-105 transition-transform">
-              {completedCount}
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6 w-full pb-32" onClick={() => setActiveFilterDropdown(null)}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-4">
+        <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
+          <Database className="h-6 w-6 text-indigo-600" />
+          <span>FLEET LOCATION DATABASE</span>
+        </h2>
+        <button
+          onClick={fetchFleetData}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all self-start md:self-auto cursor-pointer"
+        >
+          Refresh Data
+        </button>
       </div>
 
-      {/* Stretched Full-Width Service Request Form Column (Appears above pipeline on desktop, order-1 on mobile/desktop via responsive class) */}
-      <div className="w-full bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5 relative max-w-full order-1 md:order-2">
-        {!isAuthorized && (
-          <div className="absolute inset-0 bg-slate-950/10 backdrop-blur-[2px] rounded-2xl z-10 flex flex-col items-center justify-center p-6 text-center">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm shadow-2xl text-white space-y-4">
-              <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
-                <AlertTriangle className="h-6 w-6 text-amber-500 animate-pulse" />
-              </div>
-              <h3 className="text-sm font-extrabold tracking-wider uppercase">{t.unauthorizedTitle}</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {t.restrictedTimika}
-              </p>
-              <p className="text-[11px] text-slate-500 font-mono">
-                {t.unauthorizedDesc}
-              </p>
-            </div>
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-6 relative">
+        
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h3 className="font-extrabold text-slate-900 text-sm font-mono uppercase tracking-widest flex items-center space-x-2">
+              <Database className="h-5 w-5 text-indigo-500" />
+              <span>SHARED COMPANY FLEET INVENTORY</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Search global fleet locations, voyage assignments, and product statuses.
+            </p>
+          </div>
+          <div className="bg-slate-100 text-slate-600 font-mono text-xs px-3 py-1.5 rounded-md border border-slate-200 font-bold whitespace-nowrap">
+            {sortedFleet.length} Records Found
+          </div>
+        </div>
+
+        {/* Global Search Bar */}
+        <div className="flex flex-col md:flex-row items-center w-full border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white shadow-sm">
+          <div className="pl-4 py-3 hidden md:block">
+            <Search className="h-5 w-5 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Global search across all fields..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 w-full px-4 py-3 text-sm bg-transparent border-none focus:ring-0 outline-none text-slate-700"
+          />
+        </div>
+
+        {/* Data Table */}
+        {isLoadingFleet ? (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            <p className="text-xs font-mono uppercase tracking-widest">Loading Global Fleet Data...</p>
+          </div>
+        ) : sortedFleet.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 min-h-[400px]">
+            <table className="w-full text-left border-collapse whitespace-nowrap table-fixed">
+              <thead>
+                <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-mono select-none">
+                  {columns.map((col) => {
+                    const isFiltered = !!colFilters[col.key] && colFilters[col.key].length > 0;
+                    const isSorted = sortConfig?.key === col.key;
+                    
+                    return (
+                      <th 
+                        key={col.key} 
+                        className="p-3 border-b border-slate-200 relative group overflow-hidden"
+                        style={{ width: col.width }}
+                      >
+                        <div className="flex items-center justify-between space-x-1">
+                          <span className="truncate">{col.label}</span>
+                          
+                          {/* Excel Filter Icon */}
+                          <div 
+                            className={`p-1 rounded hover:bg-slate-200 cursor-pointer transition-colors shrink-0 ${isFiltered || isSorted ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFilterDropdown(activeFilterDropdown === col.key ? null : col.key);
+                            }}
+                          >
+                            <Filter className="w-3 h-3" />
+                          </div>
+                        </div>
+
+                        {/* Excel Dropdown Popover */}
+                        {activeFilterDropdown === col.key && (
+                          <ExcelFilterDropdown colKey={col.key} />
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="text-xs text-slate-700">
+                {sortedFleet.map((row, idx) => {
+                  const diffDay = Number(row["Diff Day"]);
+                  const isHighDiff = !isNaN(diffDay) && diffDay > 50;
+
+                  return (
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-mono text-slate-400 truncate" style={{ width: columns[0].width }}>{row["NO"] || idx + 1}</td>
+                      <td className="p-3 font-bold text-slate-900 truncate" style={{ width: columns[1].width }}>{row["CONTAINER_NUMBER"] || "-"}</td>
+                      <td className="p-3 truncate" style={{ width: columns[2].width }}>{formatDate(String(row["Mfg"] || "-"))}</td>
+                      <td className="p-3 truncate" style={{ width: columns[3].width }}>{row["GAS_TYPE"] || "-"}</td>
+                      <td className="p-3 text-[11px] truncate" style={{ width: columns[4].width }}>{row["VOYAGE_NO"] || "-"}</td>
+                      <td className="p-3 truncate" style={{ width: columns[5].width }}>{formatDate(String(row["DATE_TO"] || "-"))}</td>
+                      <td className="p-3 truncate" style={{ width: columns[6].width }}>
+                        <span className={`px-2 py-1 rounded-md font-mono font-bold ${isHighDiff ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {row["Diff Day"] ?? "0"}
+                        </span>
+                      </td>
+                      <td className="p-3 truncate" style={{ width: columns[7].width }}>{row["Product_"] || "-"}</td>
+                      <td className="p-3 truncate" style={{ width: columns[8].width }}>{row["Location_Category"] || "-"}</td>
+                      <td className="p-3 font-mono text-[10px] text-blue-700 bg-blue-50/50 truncate" style={{ width: columns[9].width }}>{row["Location Detail"] || row["location_detail"] || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4 border-2 border-dashed border-slate-200 rounded-2xl">
+            <Filter className="h-8 w-8 text-slate-300" />
+            <p className="text-xs font-mono uppercase tracking-widest">No Fleet Data Found Matching Your Filters</p>
           </div>
         )}
-
-        <div className="border-b border-slate-100 pb-3">
-          <div className="flex items-center space-x-2 text-blue-600 mb-1">
-            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-              <Camera className="h-4 w-4" />
-            </div>
-            <h2 className="text-xs font-extrabold uppercase text-slate-800 tracking-wider">
-              {t.formTitle}
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500">
-            {t.formSubtitle}
-          </p>
-        </div>
-
-        {/* Direct Photo Attachment Section */}
-        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/40 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold text-slate-500 flex items-center space-x-1.5 uppercase tracking-wide">
-              <ImageIcon className="h-4 w-4 text-slate-600" />
-              <span>{language === "ENG" ? "Damage Photo Attachment" : "Lampiran Foto Kerusakan"}</span>
-            </span>
-          </div>
-
-          <div className="relative">
-            <div className="flex items-center justify-center border border-dashed border-slate-200 hover:border-slate-300 rounded-xl bg-white p-5 transition-colors">
-              {photo ? (
-                <div className="relative w-full max-w-md mx-auto">
-                  <img
-                    src={photo}
-                    alt="Uploaded damage proof"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-40 object-cover rounded-lg border border-slate-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhoto(null);
-                      if (onClearPrefilled) onClearPrefilled();
-                    }}
-                    disabled={!isAuthorized}
-                    className="absolute -top-2 -right-2 bg-rose-600 hover:bg-rose-700 text-white p-1 rounded-full text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer shadow"
-                    title="Clear photo"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                  <div className="p-3 bg-slate-50 text-slate-400 rounded-full w-12 h-12 flex items-center justify-center mx-auto">
-                    <ImageIcon className="h-6 w-6" />
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={!isAuthorized}
-                      className="font-extrabold text-blue-600 hover:underline disabled:text-slate-400 disabled:no-underline cursor-pointer"
-                    >
-                      {t.uploadDamagePhoto}
-                    </button>
-                    <span> or take smartphone photo</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">PNG, JPG, JPEG up to 10MB</p>
-                </div>
-              )}
-            </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept="image/*"
-              className="hidden"
-              disabled={!isAuthorized}
-            />
-          </div>
-        </div>
-
-        {/* Create Request Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-[1_1_200px] min-w-[150px]">
-              <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5 flex items-center justify-between">
-                <span>{t.containerIdLabel} *</span>
-                {prefilledContainerNumber && (
-                  <span className="text-[8px] font-black tracking-widest text-blue-600 uppercase bg-blue-500/10 px-1.5 py-0.5 rounded">
-                    {language === "ENG" ? "Prefilled" : "Terisi"}
-                  </span>
-                )}
-              </label>
-              <div className="relative">
-                <input
-                  id="form-container-number"
-                  type="text"
-                  placeholder="e.g. FUKU-610012-2"
-                  value={containerNumber}
-                  disabled={!isAuthorized}
-                  onChange={(e) => {
-                    setContainerNumber(formatContainerNumber(e.target.value));
-                  }}
-                  className="w-full bg-blue-50/30 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
-                  required
-                />
-                {containerNumber && (
-                  <span className="absolute right-3 top-3 text-xs text-emerald-600 font-semibold flex items-center space-x-1 animate-fade-in">
-                    <CheckCircle className="h-4 w-4" />
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-[1_1_200px] min-w-[150px]">
-              <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
-                {t.inspectorNameLabel} *
-              </label>
-              <input
-                id="form-reporter-name"
-                type="text"
-                value={reporterName}
-                disabled={true}
-                placeholder="Technician Profile"
-                className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold outline-none bg-slate-100 text-slate-500 cursor-not-allowed"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Destination Hub Selector (Surabaya or Jakarta) */}
-          <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
-              {language === "ENG" ? "Send Destination Hub *" : "Kirim Tujuan Hub *"}
-            </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setDestinationLocation(LocationTeam.SURABAYA)}
-                disabled={!isAuthorized}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                  destinationLocation === LocationTeam.SURABAYA
-                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                SURABAYA
-              </button>
-              <button
-                type="button"
-                onClick={() => setDestinationLocation(LocationTeam.JAKARTA)}
-                disabled={!isAuthorized}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                  destinationLocation === LocationTeam.JAKARTA
-                    ? "bg-purple-600 text-white border-purple-600 shadow-sm"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                JAKARTA
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider font-extrabold text-slate-500 mb-1.5">
-              {t.descriptionLabel} *
-            </label>
-            <textarea
-              id="form-description"
-              placeholder={t.descriptionPlaceholder}
-              rows={3}
-              value={description}
-              disabled={!isAuthorized}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs h-24 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
-              required
-            />
-          </div>
-
-          {submitError && (
-            <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-xs font-medium flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>{submitError}</span>
-            </div>
-          )}
-
-          <button
-            id="btn-submit-request"
-            type="submit"
-            disabled={isSubmitting || !isAuthorized}
-            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-xs shadow-md shadow-blue-500/10 transition-all uppercase tracking-widest flex items-center justify-center space-x-2 cursor-pointer text-center"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{t.publishingBtn}</span>
-              </>
-            ) : (
-              <>
-                <Send className="h-3.5 w-3.5" />
-                <span>{language === "ENG" ? `Send to ${destinationLocation}` : `Kirim ke ${destinationLocation}`}</span>
-              </>
-            )}
-          </button>
-        </form>
       </div>
-
     </div>
   );
 }
