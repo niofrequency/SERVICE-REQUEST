@@ -46,13 +46,15 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && isValidId(requestId)
-        && isValidRequest(request.resource.data)
-        && (
-          isAdmin || 
-          (resource.data.status != 'DONE' && resource.data.status != 'CANCELLED' || request.resource.data.status == resource.data.status)
-        );
+        && (isAdmin || isValidRequest(request.resource.data));
 
-      allow delete: if isSignedIn() && (isAdmin || resource.data.location == 'Timika');
+      allow delete: if isSignedIn() && (
+        isAdmin || 
+        resource.data.location == 'Timika' || 
+        resource.data.destinationLocation == 'Timika' || 
+        resource.data.location == 'Surabaya' || 
+        resource.data.location == 'Jakarta'
+      );
     }
 
     match /users/{userId} {
