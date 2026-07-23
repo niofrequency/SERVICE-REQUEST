@@ -35,8 +35,32 @@ A secure, real-time enterprise full-stack web application built for **PT. Panjas
 --------------------
 
 Plaintext
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   SERVICE-REQUEST/  ├── public/  │   └── img/  │       └── panjasa-intradin_logo.png  ├── src/  │   ├── components/  │   │   ├── AdminProfile.tsx  │   │   ├── AuditTrailModal.tsx  │   │   ├── Header.tsx  │   │   ├── JakartaDashboard.tsx  │   │   ├── LocationTab.tsx  │   │   ├── SurabayaDashboard.tsx  │   │   └── TimikaForm.tsx  │   ├── firebase.ts  │   ├── index.css  │   ├── initialData.ts  │   ├── locales.ts  │   ├── main.tsx  │   └── types.ts  ├── firestore.rules  ├── server.ts  ├── tsconfig.json  ├── vercel.json  └── vite.config.ts   `
+```
+SERVICE-REQUEST/
+├── public/
+│   └── img/
+│       └── panjasa-intradin_logo.png
+├── src/
+│   ├── components/
+│   │   ├── AdminProfile.tsx
+│   │   ├── AuditTrailModal.tsx
+│   │   ├── Header.tsx
+│   │   ├── JakartaDashboard.tsx
+│   │   ├── LocationTab.tsx
+│   │   ├── SurabayaDashboard.tsx
+│   │   └── TimikaForm.tsx
+│   ├── firebase.ts
+│   ├── index.css
+│   ├── initialData.ts
+│   ├── locales.ts
+│   ├── main.tsx
+│   └── types.ts
+├── firestore.rules
+├── server.ts
+├── tsconfig.json
+├── vercel.json
+└── vite.config.ts
+```
 
 ⚙️ Installation & Local Setup
 -----------------------------
@@ -55,9 +79,33 @@ Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQL
 
 The system enforces strict security and data validation policies via Firestore Rules. Admins (mpigome44@gmail.com) maintain global read/write override privileges, while operational hub permissions isolate branch updates.
 
+```
 JavaScript
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   rules_version = '2';  service cloud.firestore {    match /databases/{database}/documents {      match /{document=**} {        allow read, write: if false;      }      function isSignedIn() { return request.auth != null; }      function isAdmin() { return isSignedIn() && request.auth.token.email == "mpigome44@gmail.com"; }      match /requests/{requestId} {        allow read: if isSignedIn();        allow create: if isSignedIn();        allow update: if isSignedIn() && (isAdmin() || resource.data.status != 'DONE');        allow delete: if isSignedIn() && (isAdmin() || resource.data.location == 'Timika');      }      match /app_data/{documentId} {        allow read: if isSignedIn();        allow write: if isAdmin();      }    }  }   `
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && request.auth.token.email == "mpigome44@gmail.com"; }
+
+    match /requests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isAdmin() || resource.data.status != 'DONE');
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.location == 'Timika');
+    }
+
+    match /app_data/{documentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
+```
 
 📄 License
 ----------
