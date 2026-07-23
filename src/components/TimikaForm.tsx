@@ -111,18 +111,18 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return result;
   }, [filteredFleet, sortConfig]);
 
-  // Column definitions with tighter, optimized widths to reduce excessive gaps
+  // Compact column definitions with smaller gaps and proper sizing
   const columns = [
     { key: "NO", label: "No", width: "50px" },
     { key: "CONTAINER_NUMBER", label: "Container Number", width: "150px" },
     { key: "Mfg", label: "Mfg", width: "100px" },
-    { key: "GAS_TYPE", label: "Gas Type", width: "80px" },
-    { key: "VOYAGE_NO", label: "Voyage No", width: "180px" },
+    { key: "GAS_TYPE", label: "Gas Type", width: "75px" },
+    { key: "VOYAGE_NO", label: "Voyage No", width: "170px" },
     { key: "DATE_TO", label: "Date To", width: "100px" },
     { key: "Diff Day", label: "Diff Day", width: "80px" },
     { key: "Product_", label: "Product", width: "90px" },
-    { key: "Location_Category", label: "Location Category", width: "130px" },
-    { key: "Location Detail", label: "Location Detail", width: "130px" }
+    { key: "Location_Category", label: "Location Category", width: "125px" },
+    { key: "Location Detail", label: "Location Detail", width: "125px" }
   ];
 
   // Component for the Excel Dropdown Menu
@@ -135,8 +135,10 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     }, [fleetData, colKey]);
 
     const activeSelections = colFilters[colKey];
-    const isInitialState = !activeSelections;
-    const [tempSelections, setTempSelections] = useState<string[]>(isInitialState ? allUniqueValues : activeSelections);
+    
+    // Fixed: Always fallback to allUniqueValues if activeSelections is undefined/null or empty array
+    const initialSelections = (activeSelections && activeSelections.length > 0) ? activeSelections : allUniqueValues;
+    const [tempSelections, setTempSelections] = useState<string[]>(initialSelections);
 
     const filteredOptions = allUniqueValues.filter(val => val.toLowerCase().includes(localSearch.toLowerCase()));
 
