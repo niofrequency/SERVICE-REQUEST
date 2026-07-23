@@ -706,18 +706,15 @@ export default function App() {
     }
   };
 
-  // CORRECTED: Interactive Delete Handler (Throws error up to Modal)
+  // CORRECTED: Interactive Delete Handler (Aligned with relaxed Firestore rules)
   const handleDeleteRequest = async (id: string) => {
     const userEmail = auth.currentUser?.email || loggedInUser?.email;
     const isAdmin = userEmail === "mpigome44@gmail.com";
-    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
     
-    if (!isTimikaUser) {
-      throw new Error("Unauthorized: Only Timika personnel and Admin can delete service requests.");
+    if (!loggedInUser && !isAdmin) {
+      throw new Error("Unauthorized: Valid session required to delete service requests.");
     }
 
-    // Removed the secondary window.confirm to prevent browser blocking. 
-    // The Modal handles UI confirmation.
     try {
       await deleteDoc(doc(db, "requests", id));
       setSelectedRequest(null);
@@ -727,14 +724,13 @@ export default function App() {
     }
   };
 
-  // CORRECTED: Interactive Update Handler (Throws error up to Modal)
+  // CORRECTED: Interactive Update Handler (Aligned with relaxed Firestore rules)
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
     const userEmail = auth.currentUser?.email || loggedInUser?.email;
     const isAdmin = userEmail === "mpigome44@gmail.com";
-    const isTimikaUser = loggedInUser?.location === LocationTeam.TIMIKA || isAdmin;
 
-    if (!isTimikaUser) {
-      throw new Error("Unauthorized: Only Timika personnel and Admin can edit active requests.");
+    if (!loggedInUser && !isAdmin) {
+      throw new Error("Unauthorized: Valid session required to edit active requests.");
     }
 
     try {
@@ -763,7 +759,7 @@ export default function App() {
         requestId: id,
         fromStatus: request.status,
         toStatus: updatedFields.status || request.status,
-        operator: loggedInUser ? loggedInUser.name : (isAdmin ? "Admin Inspector" : "Timika Inspector"),
+        operator: loggedInUser ? loggedInUser.name : (isAdmin ? "Admin Inspector" : "Authorized Inspector"),
         location: loggedInUser?.location || LocationTeam.TIMIKA,
         timestamp,
         notes: `Admin/Staff updated details: ${changes}.`
