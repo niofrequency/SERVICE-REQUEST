@@ -32,7 +32,11 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingInfo = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
 
-  // Real-time listener for live synchronization with Google Apps Script triggers
+  // Real-time listener & fallback manual fetch handler
+  const fetchFleetData = () => {
+    setIsLoadingFleet(true);
+  };
+
   useEffect(() => {
     setIsLoadingFleet(true);
     const unsubscribe = onSnapshot(doc(db, "app_data", "fleet_inventory"), (docSnap) => {
