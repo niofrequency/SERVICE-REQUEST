@@ -1559,6 +1559,7 @@ export default function App() {
                     }}
                     onNavigateHistory={() => setCurrentTab("history")}
                     onNavigateInProgress={() => setCurrentTab("in-progress")}
+                    onNavigateTab={(tab) => setCurrentTab(tab)}
                   />
                 )}
 
