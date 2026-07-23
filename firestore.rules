@@ -6,25 +6,27 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
-
     // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == "mpigome44@gmail.com";
+      // Checked by BOTH email and UID so admin access never silently breaks
+      // due to a stale/missing email field on a cached profile doc. UID is
+      // the one thing on a Firebase Auth user that never changes.
+      return isSignedIn() && (
+        request.auth.token.email == "mpigome44@gmail.com" ||
+        request.auth.uid == "TPPrwh9o7SfVBJfL8ALxzTpz6mX2"
+      );
     }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
-
     function isValidRequest(data) {
       return data.id is string && data.id.size() <= 100
         && data.containerNumber is string && data.containerNumber.size() <= 50
         && data.priority is string && data.priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
-        && data.category is string && data.category in ['Electrical', 'Structural', 'Refrigeration/Telematics', 'Mechanical']
+        && data.category is string 
         && data.description is string && data.description.size() <= 5000
         && (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 10000000))
         && data.reporterName is string && data.reporterName.size() <= 200
@@ -33,32 +35,23 @@ service cloud.firestore {
         && data.location is string && data.location in ['Timika', 'Surabaya', 'Jakarta']
         && data.updatedAt is string
         && (!('repairPhotoUrl' in data) || data.repairPhotoUrl == null || (data.repairPhotoUrl is string && data.repairPhotoUrl.size() <= 10000000))
+        && (!('repairPhotoUrls' in data) || data.repairPhotoUrls == null || (data.repairPhotoUrls is list && data.repairPhotoUrls.size() <= 3))
         && (!('resolutionNotes' in data) || data.resolutionNotes == null || (data.resolutionNotes is string && data.resolutionNotes.size() <= 5000))
         && (!('cancellationReason' in data) || data.cancellationReason == null || (data.cancellationReason is string && data.cancellationReason.size() <= 5000));
     }
-
     match /requests/{requestId} {
-      allow read: if isSignedIn() && isValidId(requestId);
-
-      allow create: if isSignedIn() 
-        && isValidId(requestId) 
-        && isValidRequest(request.resource.data);
-
-      allow update: if isSignedIn()
-        && isValidId(requestId)
-        && (isAdmin || isValidRequest(request.resource.data));
-
-      allow delete: if isSignedIn() && (
-        isAdmin || 
-        resource.data.location == 'Timika' || 
-        resource.data.destinationLocation == 'Timika' || 
-        resource.data.location == 'Surabaya' || 
-        resource.data.location == 'Jakarta'
-      );
+      // Changed 'read, list' to just 'read' to prevent RPC listener conflicts
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(requestId) && (isAdmin() || isValidRequest(request.resource.data));
+      allow update: if isSignedIn() && isValidId(requestId) && (isAdmin() || (isValidRequest(request.resource.data) && (resource.data.status != 'DONE' && resource.data.status != 'CANCELLED' || request.resource.data.status == resource.data.status)));
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.location == 'Timika');
     }
-
     match /users/{userId} {
-      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin);
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+    match /app_data/{documentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
