@@ -57,7 +57,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
         let updatedCount = 0;
 
-        // Fetch all current Firestore requests to update WAITING containers
+        // Fetch all current Firestore requests to update WAITING containers only
         const querySnapshot = await getDocs(collection(db, "requests"));
         const existingDocs = querySnapshot.docs;
 
