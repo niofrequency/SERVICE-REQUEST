@@ -28,7 +28,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
   const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc' | 'desc' } | null>(null);
   const [activeFilterDropdown, setActiveFilterDropdown] = useState<string | null>(null);
 
-  // Column width state for manual/auto-fit resizing
+  // Column width state for manual resizing
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingInfo = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
 
@@ -115,12 +115,12 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     return result;
   }, [filteredFleet, sortConfig]);
 
-  // Column definitions with compact sizing rules, shrinking Gas Type down
+  // Column definitions with Gas Type made significantly smaller
   const columns = [
-    { key: "NO", label: "No", defaultWidth: 64 },
+    { key: "NO", label: "No", defaultWidth: 60 },
     { key: "CONTAINER_NUMBER", label: "Container Number", defaultWidth: 160 },
     { key: "Mfg", label: "Mfg", defaultWidth: 110 },
-    { key: "GAS_TYPE", label: "Gas Type", defaultWidth: 90 }, // Reduced width
+    { key: "GAS_TYPE", label: "Gas Type", defaultWidth: 75 }, // Decreased width to keep it compact
     { key: "VOYAGE_NO", label: "Voyage No", defaultWidth: 200 },
     { key: "DATE_TO", label: "Date To", defaultWidth: 110 },
     { key: "Diff Day", label: "Diff Day", defaultWidth: 90 },
@@ -129,7 +129,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
     { key: "Location Detail", label: "Location Detail", defaultWidth: 140 }
   ];
 
-  // Mouse Handlers for Column Resizing & Double-Click Auto-Fit
+  // Mouse Handlers for Column Resizing
   const handleMouseDown = (e: React.MouseEvent, key: string) => {
     e.stopPropagation();
     const thElement = (e.target as HTMLElement).closest('th');
@@ -159,23 +159,6 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleDoubleClick = (key: string) => {
-    // Auto-fit: calculate max character length for this column and set an appropriate compact pixel width
-    let maxLength = key.length;
-    fleetData.forEach(row => {
-      const val = getFormattedValue(row, key);
-      if (val.length > maxLength) {
-        maxLength = val.length;
-      }
-    });
-    // Roughly 8px per character plus padding
-    const autoFitWidth = Math.max(80, maxLength * 9 + 30);
-    setColumnWidths(prev => ({
-      ...prev,
-      [key]: autoFitWidth
-    }));
   };
 
   // Component for the Excel Dropdown Menu
@@ -250,7 +233,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
         
         <div className="p-3 space-y-3">
           <div className="relative">
-            <Search className="absolute left-2 top-1/ -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
             <input 
               type="text" 
               placeholder="Search..." 
@@ -360,7 +343,6 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
                         key={col.key} 
                         className="p-3 border-b border-slate-200 relative group overflow-hidden"
                         style={{ width: `${currentWidth}px` }}
-                        onDoubleClick={() => handleDoubleClick(col.key)}
                       >
                         <div className="flex items-center justify-between space-x-1">
                           <span className="truncate">{col.label}</span>
@@ -421,7 +403,7 @@ export default function LocationTab({ isAdmin }: LocationTabProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-4 border-2 border-dashed border-slate-200 rounded-2xl">
-            <Filter className="h-8 v-8 text-slate-300" />
+            <Filter className="h-8 w-8 text-slate-300" />
             <p className="text-xs font-mono uppercase tracking-widest">No Fleet Data Found Matching Your Filters</p>
           </div>
         )}
