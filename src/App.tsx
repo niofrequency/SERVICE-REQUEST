@@ -57,6 +57,14 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
+// --- Single source of truth for admin identity ---------------------------
+// Both the UID and email are checked so that admin access never silently
+// breaks due to a stale/cached profile doc missing or mismatching the email
+// field. UID is the one thing on a Firebase Auth user that never changes.
+const ADMIN_UID = "TPPrwh9o7SfVBJfL8ALxzTpz6mX2";
+const ADMIN_EMAIL = "mpigome44@gmail.com";
+// ---------------------------------------------------------------------------
+
 enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -176,6 +184,15 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // --- Reliable admin flag ---------------------------------------------
+  // Always derived from the LIVE Firebase Auth user (firebaseUser), never
+  // from the cached/derived `loggedInUser` profile or from `currentRole`
+  // (which is just a UI role-switcher and can be flipped to a non-Admin
+  // value even while the signed-in account is the real admin). This is
+  // what should gate every Edit/Delete control in the app.
+  const isRealAdmin = firebaseUser?.uid === ADMIN_UID || firebaseUser?.email === ADMIN_EMAIL;
+  // -----------------------------------------------------------------------
+
   // Error logging function
   const handleFirestoreError = (err: unknown, operationType: OperationType, path: string | null) => {
     const errInfo: FirestoreErrorInfo = {
@@ -204,6 +221,8 @@ export default function App() {
           return;
         }
 
+        const userIsAdmin = user.uid === ADMIN_UID || user.email === ADMIN_EMAIL;
+
         const savedUserStr = localStorage.getItem("user");
         let loadedFromCache = false;
         if (savedUserStr) {
@@ -211,7 +230,7 @@ export default function App() {
             const savedUser = JSON.parse(savedUserStr);
             if (savedUser && savedUser.name && savedUser.location) {
               setLoggedInUser(savedUser);
-              if (user.email === "mpigome44@gmail.com") {
+              if (userIsAdmin) {
                 setCurrentRole("Admin");
               } else {
                 setCurrentRole(savedUser.location);
@@ -224,17 +243,16 @@ export default function App() {
         }
 
         if (!loadedFromCache) {
-          const isAdmin = user.email === "mpigome44@gmail.com";
-          const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
-          const defaultLoc = isAdmin ? LocationTeam.TIMIKA : LocationTeam.TIMIKA;
+          const defaultName = userIsAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
+          const defaultLoc = userIsAdmin ? LocationTeam.TIMIKA : LocationTeam.TIMIKA;
           const defaultProfile = { 
             name: defaultName, 
             location: defaultLoc, 
             email: user.email || "", 
-            signature: isAdmin ? "M.PIGOME" : "" 
+            signature: userIsAdmin ? "M.PIGOME" : "" 
           };
           setLoggedInUser(defaultProfile);
-          if (isAdmin) {
+          if (userIsAdmin) {
             setCurrentRole("Admin");
           } else {
             setCurrentRole(defaultLoc);
@@ -256,20 +274,19 @@ export default function App() {
             };
             setLoggedInUser(loggedIn);
             localStorage.setItem("user", JSON.stringify(loggedIn));
-            if (user.email === "mpigome44@gmail.com") {
+            if (userIsAdmin) {
               setCurrentRole("Admin");
             } else {
               setCurrentRole(profile.location as LocationTeam);
             }
           } else {
-            const isAdmin = user.email === "mpigome44@gmail.com";
-            const defaultName = isAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
+            const defaultName = userIsAdmin ? "Mark Pigome" : (user.displayName || user.email?.split("@")[0] || "Operator");
             const defaultLoc = LocationTeam.TIMIKA;
             const defaultProfile = { 
               name: defaultName, 
               location: defaultLoc, 
               email: user.email || "", 
-              signature: isAdmin ? "M.PIGOME" : "" 
+              signature: userIsAdmin ? "M.PIGOME" : "" 
             };
             
             try {
@@ -278,7 +295,7 @@ export default function App() {
                 name: defaultName,
                 location: defaultLoc,
                 email: user.email || "",
-                signature: isAdmin ? "M.PIGOME" : ""
+                signature: userIsAdmin ? "M.PIGOME" : ""
               });
             } catch (writeErr) {
               console.warn("Failed to create profile in Firestore (offline), using local defaults:", writeErr);
@@ -286,7 +303,7 @@ export default function App() {
 
             setLoggedInUser(defaultProfile);
             localStorage.setItem("user", JSON.stringify(defaultProfile));
-            if (isAdmin) {
+            if (userIsAdmin) {
               setCurrentRole("Admin");
             } else {
               setCurrentRole(defaultLoc);
@@ -364,7 +381,7 @@ export default function App() {
       await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       setAuthSuccess("Successfully logged in!");
     } catch (err: any) {
-      const isTargetAdmin = emailInput.trim().toLowerCase() === "mpigome44@gmail.com" && 
+      const isTargetAdmin = emailInput.trim().toLowerCase() === ADMIN_EMAIL && 
                             (passwordInput === "admintim" || passwordInput === "admtim");
 
       if (isTargetAdmin && (err.code === "auth/user-not-found" || err.message?.includes("user-not-found") || err.code === "auth/invalid-credential" || err.message?.includes("invalid-credential"))) {
@@ -372,13 +389,13 @@ export default function App() {
           isRegisteringRef.current = true;
           const userCredential = await createUserWithEmailAndPassword(auth, emailInput.trim().toLowerCase(), passwordInput);
           const user = userCredential.user;
-          const newUser = { name: "Mark Pigome", location: LocationTeam.TIMIKA, email: "mpigome44@gmail.com", signature: "M.PIGOME" };
+          const newUser = { name: "Mark Pigome", location: LocationTeam.TIMIKA, email: ADMIN_EMAIL, signature: "M.PIGOME" };
           
           await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: "Mark Pigome",
             location: LocationTeam.TIMIKA,
-            email: "mpigome44@gmail.com",
+            email: ADMIN_EMAIL,
             signature: "M.PIGOME"
           });
           
@@ -427,7 +444,7 @@ export default function App() {
 
       setLoggedInUser(newUser);
       localStorage.setItem("user", JSON.stringify(newUser));
-      if (emailInput.trim().toLowerCase() === "mpigome44@gmail.com") {
+      if (emailInput.trim().toLowerCase() === ADMIN_EMAIL) {
         setCurrentRole("Admin");
       } else {
         setCurrentRole(signupLocation);
@@ -632,8 +649,8 @@ export default function App() {
       const oldStatus = request.status;
       const timestamp = new Date().toISOString();
       
-      const userEmail = auth.currentUser?.email || loggedInUser?.email;
-      const isAdmin = userEmail === "mpigome44@gmail.com";
+      // Always derive admin status from the live Firebase Auth user.
+      const isAdmin = auth.currentUser?.uid === ADMIN_UID || auth.currentUser?.email === ADMIN_EMAIL;
 
       if (updatePayload.location === LocationTeam.TIMIKA) {
         if (!isAdmin && (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE)) {
@@ -706,11 +723,11 @@ export default function App() {
     }
   };
 
-  // CORRECTED: Interactive Delete Handler (Aligned with relaxed Firestore rules)
+  // Interactive Delete Handler — admin status derived from the live Firebase
+  // Auth user (auth.currentUser), which is what Firestore rules actually check.
   const handleDeleteRequest = async (id: string) => {
-    const userEmail = auth.currentUser?.email || loggedInUser?.email;
-    const isAdmin = userEmail === "mpigome44@gmail.com";
-    
+    const isAdmin = auth.currentUser?.uid === ADMIN_UID || auth.currentUser?.email === ADMIN_EMAIL;
+
     if (!loggedInUser && !isAdmin) {
       throw new Error("Unauthorized: Valid session required to delete service requests.");
     }
@@ -724,10 +741,9 @@ export default function App() {
     }
   };
 
-  // CORRECTED: Interactive Update Handler (Aligned with relaxed Firestore rules)
+  // Interactive Update Handler — same reliable admin derivation as above.
   const handleUpdateRequest = async (id: string, updatedFields: Partial<ServiceRequest>) => {
-    const userEmail = auth.currentUser?.email || loggedInUser?.email;
-    const isAdmin = userEmail === "mpigome44@gmail.com";
+    const isAdmin = auth.currentUser?.uid === ADMIN_UID || auth.currentUser?.email === ADMIN_EMAIL;
 
     if (!loggedInUser && !isAdmin) {
       throw new Error("Unauthorized: Valid session required to edit active requests.");
@@ -1600,7 +1616,7 @@ export default function App() {
             ) : currentTab === "location" ? (
                /* NEW LOCATION TAB VIEW WITH CONNECTED HANDLERS */
               <LocationTab 
-                isAdmin={currentRole === "Admin"} 
+                isAdmin={isRealAdmin} 
                 requests={requests}
                 onSelectRequest={setSelectedRequest}
               />
@@ -1931,7 +1947,7 @@ export default function App() {
                                         <span>Print</span>
                                       </button>
                                     )}
-                                    {loggedInUser?.email === "mpigome44@gmail.com" && (
+                                    {isRealAdmin && (
                                       <button
                                         onClick={() => {
                                           if (window.confirm(language === "ENG" ? "Are you sure you want to delete this historical record?" : "Apakah Anda yakin ingin menghapus arsip ini?")) {
@@ -1969,7 +1985,7 @@ export default function App() {
             loggedInUser={loggedInUser}
             onDeleteRequest={handleDeleteRequest}
             onUpdateRequest={handleUpdateRequest}
-            isAdmin={currentRole === "Admin" || loggedInUser?.email === "mpigome44@gmail.com"}
+            isAdmin={isRealAdmin}
           />
         )}
 
