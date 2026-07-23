@@ -636,8 +636,9 @@ export default function App() {
       const userEmail = auth.currentUser?.email || loggedInUser?.email;
       const isAdmin = userEmail === "mpigome44@gmail.com";
 
+      // FIXED BUG: Properly allow Admin override on Timika status locks
       if (updatePayload.location === LocationTeam.TIMIKA) {
-        if (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE) {
+        if (!isAdmin && (updatePayload.status === RequestStatus.IN_PROGRESS || updatePayload.status === RequestStatus.DONE)) {
           throw new Error("Unauthorized: Timika port inspectors cannot modify or advance workshop repair jobs.");
         }
       } else if (updatePayload.location === LocationTeam.SURABAYA || updatePayload.location === LocationTeam.JAKARTA) {
@@ -1975,6 +1976,7 @@ export default function App() {
             loggedInUser={loggedInUser}
             onDeleteRequest={handleDeleteRequest}
             onUpdateRequest={handleUpdateRequest}
+            isAdmin={currentRole === "Admin" || loggedInUser?.email === "mpigome44@gmail.com"}
           />
         )}
 
